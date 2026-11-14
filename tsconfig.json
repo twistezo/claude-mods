@@ -15,5 +15,10 @@
     "jsxFragmentFactory": "Fragment"
   },
   // `.claude-plugin/types` holds the API types; the engine writes them when it loads the mod
-  "include": ["plugins/*/.claude-plugin/types", "plugins/*/hooks", "shared"]
+  "include": [
+    "plugins/*/.claude-plugin/types",
+    "plugins/*/hooks",
+    "plugins/*/types",
+    "shared"
+  ]
 }

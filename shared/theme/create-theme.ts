@@ -1,7 +1,7 @@
 // Builds a theme mod's look from a dark palette and an optional light one.
 // Source of truth: shared/theme. `npm run sync` copies it to every mod's hooks/shared
 
-import type { ThemeSetArgs } from "claude-code"
+import type { ThemeBackdrop, ThemeSetArgs } from "claude-code"
 
 import { makeColors } from "./make-colors.js"
 
@@ -24,6 +24,8 @@ type ThemeOptions = {
   dark: Palette
   // Leave out for a dark-only look: the colors then carry no light half
   light?: Palette
+  // What is behind the conversation; absent, the page color, which follows the mode
+  backdrop?: ThemeBackdrop
 }
 
 type Definition = Parameters<typeof makeColors>[0]
@@ -69,9 +71,9 @@ const git = (palette: Palette): Git => ({
   conflicting: palette.orange,
 })
 
-// Every surface on Background: a lighter one shows as a band under the prompt box
-// and flashes over the conversation while a session opens
-const surfaces = (palette: Palette): Anchors => ({
+// The gray ramp's anchors: every surface on Background (a lighter one shows as a band under
+// the prompt box and flashes over the conversation while a session opens) and the main text
+const grayAnchors = (palette: Palette): Anchors => ({
   "surface-0": palette.background,
   "surface-1": palette.background,
   "surface-2": palette.background,
@@ -94,7 +96,7 @@ const lightHalf = (
     : {
         light: {
           gray: {
-            anchors: { ...surfaces(light), "text-muted": light.comment },
+            anchors: { ...grayAnchors(light), "text-muted": light.comment },
           },
           roles: roles(light, LIGHT_STOPS),
           git: git(light),
@@ -108,7 +110,7 @@ export const createTheme = (options: ThemeOptions): Theme => {
     codeTheme: { dark: DARK_CODE_THEME },
     dark: {
       // No text-muted: Comment is under 3:1 on the app's field and hover fills, so makeColors derives one
-      gray: { anchors: surfaces(options.dark) },
+      gray: { anchors: grayAnchors(options.dark) },
       roles: roles(options.dark, DARK_STOPS),
       git: git(options.dark),
     },
@@ -118,7 +120,7 @@ export const createTheme = (options: ThemeOptions): Theme => {
   const look: ThemeSetArgs = {
     colors: theme,
     // A palette name follows the mode: the dark Background in dark, the light one in light
-    backdrop: { color: "surface-0" },
+    backdrop: options.backdrop ?? { color: "surface-0" },
   }
 
   const unpainted: string | undefined = problems.find(line =>

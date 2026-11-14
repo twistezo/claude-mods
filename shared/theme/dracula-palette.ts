@@ -1,6 +1,6 @@
 // Every Dracula color the mods share. Values and names: https://draculatheme.com/spec
 
-import type { Palette } from "./create-theme"
+import type { Hex, Palette } from "./create-theme"
 
 // Dracula Classic, the dark mode
 export const dracula: Palette = {
@@ -25,3 +25,6 @@ export const alucard: Palette = {
   purple: "#644ac9",
   pink: "#a3144d",
 }
+
+// Background Darker: Dracula's darkest background variant, outside the shared Palette roles
+export const draculaBackgroundDarker: Hex = "#191a21"

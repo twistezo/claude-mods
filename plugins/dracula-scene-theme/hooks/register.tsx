@@ -11,17 +11,15 @@ const THEME: Theme = createTheme({
   label: "Dracula scene",
   // Dark only: the scene and the glass are dark, so the look has no light half
   dark: dracula,
-})
-
-const LOOK: ThemeSetArgs = {
-  colors: THEME.look.colors,
   backdrop: {
     scene: SCENE_NAME,
     // Strong glass: the scene shows faintly through the panels, text stays readable
     glass: { blur: 64, tint: dracula.background, opacity: 0.85 },
   },
-  overrideColorScheme: "dark",
-}
+})
+
+// The scene is dark, so the look asks for dark mode
+const LOOK: ThemeSetArgs = { ...THEME.look, overrideColorScheme: "dark" }
 
 export const register: Register = on => {
   on("session.start", async ($, e, next) => {

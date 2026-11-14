@@ -1,6 +1,5 @@
-import { SCENE_GROUND } from "./palette"
 import type { Hex } from "./shared/create-theme"
-import { dracula } from "./shared/dracula-palette"
+import { dracula, draculaBackgroundDarker } from "./shared/dracula-palette"
 
 // One blurred glow: its color, where it starts, how big it is, and how far and how fast it drifts
 type Glow = {
@@ -60,11 +59,10 @@ const glowMarkup = (glow: Glow): string =>
   `<circle cx="${glow.x}" cy="${glow.y}" r="${glow.radius}" fill="${glow.color}">` +
   drift("cx", glow.x, glow.driftX, glow.seconds) +
   drift("cy", glow.y, glow.driftY, glow.seconds) +
-  drift("r", glow.radius, Math.round(glow.radius * 0.25), glow.seconds) +
   "</circle>"
 
 export const SCENE_SVG: string = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
 <defs><filter id="blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="120"/></filter></defs>
-<rect width="1600" height="1000" fill="${SCENE_GROUND}"/>
+<rect width="1600" height="1000" fill="${draculaBackgroundDarker}"/>
 <g filter="url(#blur)" opacity="0.55">${GLOWS.map(glowMarkup).join("")}</g>
 </svg>`

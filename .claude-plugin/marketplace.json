@@ -16,6 +16,11 @@
       "name": "dracula-scene-theme",
       "source": "./plugins/dracula-scene-theme",
       "description": "Dracula colors over a slowly moving purple and pink scene, for dark mode in the Claude desktop app"
+    },
+    {
+      "name": "session-band",
+      "source": "./plugins/session-band",
+      "description": "A row above the prompt with the folder, git branch, context use and rate limits"
     }
   ]
 }

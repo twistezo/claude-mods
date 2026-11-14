@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.5 - 2026-11-14
+
+- Shared theme code: optional backdrop, clearer names; no visible change.
+
 ## 0.1.4 - 2026-11-14
 
 - Palette moved to `shared/theme`; no visible change.

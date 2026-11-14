@@ -1,4 +1,4 @@
-// Copies shared/theme into every mod's hooks/shared: an installed mod gets only its own folder.
+// Copies shared/theme into every theme mod's hooks/shared: an installed mod gets only its own folder.
 // Usage: node scripts/sync-shared.ts [--check]
 // --check writes nothing and exits 1 when a copy is missing or out of date
 
@@ -21,9 +21,10 @@ const readOrUndefined = (path: string): string | undefined =>
   existsSync(path) ? readFileSync(path, "utf8") : undefined
 
 const sourceFiles: string[] = readdirSync(SOURCE_DIR)
+// Theme mods only: other mods do not use shared/theme
 const pluginDirs: string[] = readdirSync(PLUGINS_DIR)
+  .filter(plugin => plugin.endsWith("-theme"))
   .map(plugin => join(PLUGINS_DIR, plugin))
-  .filter(dir => existsSync(join(dir, "hooks")))
 
 const stale: string[] = []
 
