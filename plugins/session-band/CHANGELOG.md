@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3 - 2026-11-14
+
+- Back to the app's own band background: the page color left a visible outline.
+
 ## 0.1.2 - 2026-11-14
 
 - Band background is the page color, so it blends in.

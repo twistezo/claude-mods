@@ -15,6 +15,15 @@ Mods for the Claude desktop app.
 
 Desktop app: **+** → **Plugins** → add marketplace `twistezo/claude-mods` → add one theme and any other mods → new session.
 
+## Update
+
+Type in the prompt box, starting with `!`, then run `/reload-plugins` or open a new session:
+
+```bash
+# <mod>: dracula-theme, dracula-scene-theme or session-band; repeat the update for each installed mod
+claude plugin marketplace update claude-mods && claude plugin update <mod>@claude-mods
+```
+
 ## License
 
 - [MIT](LICENSE)
