@@ -1,0 +1,5 @@
+# Copied unchanged from the plugin-authoring skill
+**/make-colors.js
+**/make-colors.d.ts
+# Written by the engine on load
+**/.claude-plugin/types/

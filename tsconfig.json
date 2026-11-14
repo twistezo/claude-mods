@@ -1,0 +1,19 @@
+{
+  // Options from the plugin-authoring skill: hooks run with no DOM and no Node
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["es2023"],
+    "types": [],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "jsx": "react",
+    "jsxFactory": "h",
+    "jsxFragmentFactory": "Fragment"
+  },
+  // `.claude-plugin/types` holds the API types; the engine writes them when it loads the mod
+  "include": ["plugins/*/.claude-plugin/types", "plugins/*/hooks"]
+}

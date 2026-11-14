@@ -1,0 +1,8 @@
+{
+  "name": "dracula-theme",
+  "version": "0.1.0",
+  "description": "Dracula (dark) and Alucard (light) colors for the Claude desktop app",
+  "author": { "name": "twistezo" },
+  "homepage": "https://draculatheme.com",
+  "license": "MIT"
+}

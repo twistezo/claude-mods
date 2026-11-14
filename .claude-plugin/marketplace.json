@@ -1,0 +1,16 @@
+{
+  "name": "claude-mods",
+  "owner": {
+    "name": "twistezo"
+  },
+  "metadata": {
+    "description": "Mods for the Claude desktop app"
+  },
+  "plugins": [
+    {
+      "name": "dracula-theme",
+      "source": "./plugins/dracula-theme",
+      "description": "Dracula (dark) and Alucard (light) colors for the Claude desktop app"
+    }
+  ]
+}
