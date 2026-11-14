@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4 - 2026-11-14
+
+- Branch shown as `⎇ name` instead of `(name)`; the name's color and bold weight sit on one element, so it renders bold.
+
 ## 0.1.3 - 2026-11-14
 
 - Back to the app's own band background: the page color left a visible outline.

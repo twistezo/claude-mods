@@ -9,7 +9,7 @@ Mods for the Claude desktop app.
 
 | Mod                                    | What it shows above the prompt                                       |
 | -------------------------------------- | -------------------------------------------------------------------- |
-| [`session-band`](plugins/session-band) | `~/folder (branch) │ +347 -5 │ ctx 64% │ 5h 16% │ 7d 30% │ agents 2` |
+| [`session-band`](plugins/session-band) | `~/folder ⎇ branch │ +347 -5 │ ctx 64% │ 5h 16% │ 7d 30% │ agents 2` |
 
 ## Install
 

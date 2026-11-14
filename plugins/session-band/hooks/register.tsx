@@ -34,6 +34,9 @@ const bandInfo: Atom<BandInfo | null> = atom(
 // The app's theme has no cyan role, so the branch keeps Dracula's Cyan
 const BRANCH_COLOR: Hex = "#8be9fd"
 
+// A wide (em) space after the folder, then git's branch symbol, muted like the labels
+const BRANCH_MARK: string = "\u2003\u2387 "
+
 // A wide (em) space each side keeps the segments apart at any font size
 const SEPARATOR: string = "\u2003│\u2003"
 
@@ -251,10 +254,11 @@ export const register: Register = on => {
         <Text>
           <Text color="suggestion">{band.path}</Text>
           {band.branch !== null && (
-            <Text color={BRANCH_COLOR}>
-              {" ("}
-              <Text weight="semibold">{band.branch}</Text>
-              {")"}
+            <Text>
+              <Text color="inactive">{BRANCH_MARK}</Text>
+              <Text color={BRANCH_COLOR} weight="semibold">
+                {band.branch}
+              </Text>
             </Text>
           )}
           {hasChanges(band.changes) && (
