@@ -44,13 +44,13 @@ const git = (palette: Palette): Git => ({
   conflicting: palette.orange,
 })
 
-// Page on Background; cards, panels and menus on Background Light (the spec's floating elements).
-// No text-muted: Dracula's Comment is under 3:1 on these surfaces, so makeColors derives one
+// Page, cards and panels (the prompt box among them) on Background; menus on Background Light,
+// the spec's floating elements. No text-muted: Dracula's Comment is under 3:1 here, so makeColors derives one
 const darkAnchors: Anchors = {
   "surface-0": dracula.background,
   "text-primary": dracula.foreground,
-  "surface-1": dracula.backgroundLight,
-  "surface-2": dracula.backgroundLight,
+  "surface-1": dracula.background,
+  "surface-2": dracula.background,
   "surface-3": dracula.backgroundLight,
 }
 

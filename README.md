@@ -48,8 +48,8 @@ All colors come from [the Dracula spec](https://draculatheme.com/spec) and live 
 
 | App role                                                  | Dracula (dark)                          | Alucard (light)    |
 | --------------------------------------------------------- | --------------------------------------- | ------------------ |
-| Page                                                      | Background                              | Background         |
-| Cards, panels, menus                                      | Background Light                        | Background         |
+| Page, cards, panels (prompt box)                          | Background                              | Background         |
+| Menus                                                     | Background Light                        | Background         |
 | Text                                                      | Foreground                              | Foreground         |
 | Muted text                                                | derived by `makeColors`                 | Comment            |
 | Code                                                      | the app's `dracula` code theme          | the app's own      |
