@@ -34,6 +34,9 @@ const bandInfo: Atom<BandInfo | null> = atom(
 // The app's theme has no cyan role, so the branch keeps Dracula's Cyan
 const BRANCH_COLOR: Hex = "#8be9fd"
 
+// The theme key the desktop app maps to the page color (surface-0), so the band blends in
+const PAGE_BACKGROUND: string = "clawd_background"
+
 // A wide (em) space each side keeps the segments apart at any font size
 const SEPARATOR: string = "\u2003│\u2003"
 
@@ -247,7 +250,7 @@ export const register: Register = on => {
     const { Box, Text } = $.ui.resolve(e)
 
     return (
-      <Box>
+      <Box backgroundColor={PAGE_BACKGROUND}>
         <Text>
           <Text color="suggestion">{band.path}</Text>
           {band.branch !== null && (

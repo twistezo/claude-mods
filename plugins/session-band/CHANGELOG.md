@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2 - 2026-11-14
+
+- Band background is the page color, so it blends in.
+
 ## 0.1.1 - 2026-11-14
 
 - Wider gaps: an em space each side of the separators.
