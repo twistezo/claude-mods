@@ -20,8 +20,8 @@ const LOOK: ThemeSetArgs = {
   colors: COLORS && { ...COLORS, inputs: { dark: COLORS.inputs.dark } },
   backdrop: {
     scene: SCENE_NAME,
-    // Opaque glass: the scene shows only between and around the panels
-    glass: { blur: 64, tint: dracula.background, opacity: 1 },
+    // Strong glass: the scene shows faintly through the panels, text stays readable
+    glass: { blur: 64, tint: dracula.background, opacity: 0.85 },
   },
   overrideColorScheme: "dark",
 }
