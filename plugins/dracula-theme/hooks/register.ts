@@ -1,8 +1,8 @@
 import type { Register } from "claude-code"
 
-import { alucard, dracula } from "./palette"
 import { createTheme } from "./shared/create-theme"
 import type { Theme } from "./shared/create-theme"
+import { alucard, dracula } from "./shared/dracula-palette"
 
 const THEME: Theme = createTheme({
   label: "Dracula",

@@ -1,6 +1,6 @@
-// Every color of the mod lives here. Values and names: https://draculatheme.com/spec
+// Every Dracula color the mods share. Values and names: https://draculatheme.com/spec
 
-import type { Palette } from "./shared/create-theme"
+import type { Palette } from "./create-theme"
 
 // Dracula Classic, the dark mode
 export const dracula: Palette = {

@@ -1,23 +1,20 @@
-import type { Register, ThemeColors, ThemeSetArgs } from "claude-code"
+import type { Register, ThemeSetArgs } from "claude-code"
 
-import { alucard, dracula } from "./palette"
 import { SCENE_SVG } from "./scene"
 import { createTheme } from "./shared/create-theme"
 import type { Theme } from "./shared/create-theme"
+import { dracula } from "./shared/dracula-palette"
 
-const SCENE_NAME = "dracula-glow"
+const SCENE_NAME: string = "dracula-glow"
 
 const THEME: Theme = createTheme({
   label: "Dracula scene",
+  // Dark only: the scene and the glass are dark, so the look has no light half
   dark: dracula,
-  light: alucard,
 })
 
-const COLORS: ThemeColors | undefined = THEME.look.colors
-
-// Dark only: the scene and the glass are dark, so the look sends its dark half alone
 const LOOK: ThemeSetArgs = {
-  colors: COLORS && { ...COLORS, inputs: { dark: COLORS.inputs.dark } },
+  colors: THEME.look.colors,
   backdrop: {
     scene: SCENE_NAME,
     // Strong glass: the scene shows faintly through the panels, text stays readable

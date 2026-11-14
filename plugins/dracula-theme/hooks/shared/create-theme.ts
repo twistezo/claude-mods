@@ -1,11 +1,11 @@
-// Builds a theme mod's look from a dark and a light palette.
+// Builds a theme mod's look from a dark palette and an optional light one.
 // Source of truth: shared/theme. `npm run sync` copies it to every mod's hooks/shared
 
 import type { ThemeSetArgs } from "claude-code"
 
 import { makeColors } from "./make-colors.js"
 
-type Hex = `#${string}`
+export type Hex = `#${string}`
 
 export type Palette = {
   background: Hex
@@ -22,7 +22,8 @@ type ThemeOptions = {
   // The theme's name, shown by the app: 1 to 64 characters
   label: string
   dark: Palette
-  light: Palette
+  // Leave out for a dark-only look: the colors then carry no light half
+  light?: Palette
 }
 
 type Definition = Parameters<typeof makeColors>[0]
@@ -39,11 +40,11 @@ const DARK_STOPS: TextStops = { text: 300, success: 400 }
 const LIGHT_STOPS: TextStops = { text: 600, success: 600 }
 
 // The app ships Dracula for code; it has nothing for Alucard, so light mode keeps the app's own
-const DARK_CODE_THEME = "dracula"
+const DARK_CODE_THEME: string = "dracula"
 
 // Pins the exact palette color to the stop the mode reads text and fills from,
 // so makeColors does not shift its lightness
-const role = (hex: string, stop: number): Role => ({
+const pinnedRole = (hex: Hex, stop: number): Role => ({
   seed: hex,
   fillShade: stop,
   stops: { [stop]: hex },
@@ -52,11 +53,11 @@ const role = (hex: string, stop: number): Role => ({
 // The palette's own colors, not the spec's functional ones: those drop text under 3:1,
 // and the app then refuses the whole theme
 const roles = (palette: Palette, stops: TextStops): Roles => ({
-  accent: role(palette.purple, stops.text),
-  danger: role(palette.red, stops.text),
-  success: role(palette.green, stops.success),
-  warning: role(palette.orange, stops.text),
-  pro: role(palette.pink, stops.text),
+  accent: pinnedRole(palette.purple, stops.text),
+  danger: pinnedRole(palette.red, stops.text),
+  success: pinnedRole(palette.green, stops.success),
+  warning: pinnedRole(palette.orange, stops.text),
+  pro: pinnedRole(palette.pink, stops.text),
 })
 
 const git = (palette: Palette): Git => ({
@@ -84,6 +85,22 @@ export type Theme = {
   unpainted: string | undefined
 }
 
+// The light half, or `only: "dark"` so the colors carry no light inputs at all
+const lightHalf = (
+  light: Palette | undefined,
+): Pick<Definition, "light" | "only"> =>
+  light === undefined
+    ? { only: "dark" }
+    : {
+        light: {
+          gray: {
+            anchors: { ...surfaces(light), "text-muted": light.comment },
+          },
+          roles: roles(light, LIGHT_STOPS),
+          git: git(light),
+        },
+      }
+
 // Values only: the engine needs each mod's hooks written out in the mod itself
 export const createTheme = (options: ThemeOptions): Theme => {
   const { theme, problems } = makeColors({
@@ -95,16 +112,7 @@ export const createTheme = (options: ThemeOptions): Theme => {
       roles: roles(options.dark, DARK_STOPS),
       git: git(options.dark),
     },
-    light: {
-      gray: {
-        anchors: {
-          ...surfaces(options.light),
-          "text-muted": options.light.comment,
-        },
-      },
-      roles: roles(options.light, LIGHT_STOPS),
-      git: git(options.light),
-    },
+    ...lightHalf(options.light),
   })
 
   const look: ThemeSetArgs = {

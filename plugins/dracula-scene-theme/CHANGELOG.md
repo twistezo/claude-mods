@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2 - 2026-11-14
+
+- Palette from `shared/theme`, dark-only colors built directly; no visible change.
+
 ## 0.1.1 - 2026-11-14
 
 - Scene now moves (SMIL instead of CSS transforms); faster, wider drift.

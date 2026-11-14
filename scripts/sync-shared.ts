@@ -11,9 +11,9 @@ import {
 } from "node:fs"
 import { join } from "node:path"
 
-const SOURCE_DIR = "shared/theme"
-const PLUGINS_DIR = "plugins"
-const TARGET_SUBDIR = "hooks/shared"
+const SOURCE_DIR: string = "shared/theme"
+const PLUGINS_DIR: string = "plugins"
+const TARGET_SUBDIR: string = "hooks/shared"
 
 const isCheck: boolean = process.argv.includes("--check")
 
