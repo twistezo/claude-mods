@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1 - 2026-11-14
+
+- Wider gaps: an em space each side of the separators.
+- Branch name and numbers in bold; labels and `%` muted.
+
 ## 0.1.0 - 2026-11-14
 
 - Row above the prompt: `~/folder (branch) │ +347 -5 │ ctx 64% │ 5h 16% │ 7d 30% │ agents 2`.

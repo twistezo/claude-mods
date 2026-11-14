@@ -6,7 +6,6 @@ import type { BandInfo } from "../types"
 import {
   activeAgents,
   countLines,
-  formatPercent,
   hasChanges,
   limitPercent,
   parseShortstat,
@@ -134,13 +133,6 @@ describe("hasChanges shows the segment only for real changes", () => {
   })
 })
 
-describe("formatPercent rounds to a whole percent", () => {
-  test("rounds half up and keeps whole numbers", () => {
-    expect(formatPercent(30.5)).toBe("31%")
-    expect(formatPercent(7)).toBe("7%")
-  })
-})
-
 describe("segments lists the figures with a reading", () => {
   const full: BandInfo = {
     path: "~/app",
@@ -152,12 +144,24 @@ describe("segments lists the figures with a reading", () => {
     agents: 2,
   }
 
+  test("rounds percents to whole numbers", () => {
+    expect(
+      segments({
+        ...full,
+        context: 30.5,
+        fiveHour: null,
+        sevenDay: null,
+        agents: 0,
+      }),
+    ).toEqual([{ label: "ctx", value: "31", unit: "%", level: "normal" }])
+  })
+
   test("shows every figure in order, with its level", () => {
     expect(segments(full)).toEqual([
-      { label: "ctx", value: "64%", level: "normal" },
-      { label: "5h", value: "86%", level: "warning" },
-      { label: "7d", value: "100%", level: "danger" },
-      { label: "agents", value: "2", level: "normal" },
+      { label: "ctx", value: "64", unit: "%", level: "normal" },
+      { label: "5h", value: "86", unit: "%", level: "warning" },
+      { label: "7d", value: "100", unit: "%", level: "danger" },
+      { label: "agents", value: "2", unit: "", level: "normal" },
     ])
   })
 

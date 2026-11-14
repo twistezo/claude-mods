@@ -7,10 +7,12 @@ export type UsageLevel = "normal" | "warning" | "danger"
 // The rate-limit windows the band shows
 export type RateLimitKind = "five_hour" | "seven_day"
 
-// One labelled figure after the folder and branch: `ctx 64%`, `agents 2`
+// One labelled figure after the folder and branch: `ctx 64%`, `agents 2`.
+// The value is drawn bold in its level's color, the label and unit muted
 export type Segment = {
   label: string
   value: string
+  unit: string
   level: UsageLevel
 }
 
@@ -88,13 +90,17 @@ export const hasChanges = (
 ): changes is LineChanges =>
   changes !== null && (changes.added > 0 || changes.removed > 0)
 
-export const formatPercent = (percent: number): string =>
-  `${Math.round(percent)}%`
-
 const usageSegment = (label: string, percent: number | null): Segment[] =>
   percent === null
     ? []
-    : [{ label, value: formatPercent(percent), level: usageLevel(percent) }]
+    : [
+        {
+          label,
+          value: String(Math.round(percent)),
+          unit: "%",
+          level: usageLevel(percent),
+        },
+      ]
 
 // The figures to show, in order, leaving out the ones with no reading
 export const segments = (band: BandInfo): Segment[] => [
@@ -106,6 +112,7 @@ export const segments = (band: BandInfo): Segment[] => [
         {
           label: "agents",
           value: String(band.agents),
+          unit: "",
           level: "normal" as const,
         },
       ]

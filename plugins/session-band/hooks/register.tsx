@@ -34,6 +34,9 @@ const bandInfo: Atom<BandInfo | null> = atom(
 // The app's theme has no cyan role, so the branch keeps Dracula's Cyan
 const BRANCH_COLOR: Hex = "#8be9fd"
 
+// A wide (em) space each side keeps the segments apart at any font size
+const SEPARATOR: string = "\u2003│\u2003"
+
 const LEVEL_COLOR: Record<UsageLevel, string> = {
   normal: "text",
   warning: "warning",
@@ -248,19 +251,33 @@ export const register: Register = on => {
         <Text>
           <Text color="suggestion">{band.path}</Text>
           {band.branch !== null && (
-            <Text color={BRANCH_COLOR}> ({band.branch})</Text>
+            <Text color={BRANCH_COLOR}>
+              {" ("}
+              <Text weight="semibold">{band.branch}</Text>
+              {")"}
+            </Text>
           )}
           {hasChanges(band.changes) && (
             <Text>
-              <Text color="inactive"> │ </Text>
-              <Text color="diffAdded">+{band.changes.added}</Text>{" "}
-              <Text color="diffRemoved">-{band.changes.removed}</Text>
+              <Text color="inactive">{SEPARATOR}</Text>
+              <Text color="diffAdded">
+                +<Text weight="semibold">{band.changes.added}</Text>
+              </Text>{" "}
+              <Text color="diffRemoved">
+                -<Text weight="semibold">{band.changes.removed}</Text>
+              </Text>
             </Text>
           )}
           {segments(band).map((segment: Segment) => (
             <Text key={segment.label}>
-              <Text color="inactive"> │ {segment.label} </Text>
-              <Text color={LEVEL_COLOR[segment.level]}>{segment.value}</Text>
+              <Text color="inactive">
+                {SEPARATOR}
+                {segment.label}{" "}
+              </Text>
+              <Text color={LEVEL_COLOR[segment.level]} weight="semibold">
+                {segment.value}
+              </Text>
+              <Text color="inactive">{segment.unit}</Text>
             </Text>
           ))}
         </Text>
