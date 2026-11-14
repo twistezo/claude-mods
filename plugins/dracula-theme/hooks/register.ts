@@ -44,24 +44,22 @@ const git = (palette: Palette): Git => ({
   conflicting: palette.orange,
 })
 
-// Page, cards and panels (the prompt box among them) on Background; menus on Background Light,
-// the spec's floating elements. No text-muted: Dracula's Comment is under 3:1 here, so makeColors derives one
-const darkAnchors: Anchors = {
-  "surface-0": dracula.background,
-  "text-primary": dracula.foreground,
-  "surface-1": dracula.background,
-  "surface-2": dracula.background,
-  "surface-3": dracula.backgroundLight,
-}
+// Every surface on Background. A lighter one (Background Light) shows as a band under the
+// prompt box and flashes over the conversation while a session opens
+const surfaces = (palette: Palette): Anchors => ({
+  "surface-0": palette.background,
+  "surface-1": palette.background,
+  "surface-2": palette.background,
+  "surface-3": palette.background,
+  "text-primary": palette.foreground,
+})
 
-// Light mode needs raised surfaces as light as the page or lighter, and Background is Alucard's lightest
+// No text-muted: Dracula's Comment is under 3:1 on the app's field and hover fills, so makeColors derives one
+const darkAnchors: Anchors = surfaces(dracula)
+
 const lightAnchors: Anchors = {
-  "surface-0": alucard.background,
-  "text-primary": alucard.foreground,
+  ...surfaces(alucard),
   "text-muted": alucard.comment,
-  "surface-1": alucard.background,
-  "surface-2": alucard.background,
-  "surface-3": alucard.background,
 }
 
 const { theme, problems } = makeColors({
