@@ -2,6 +2,12 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions match `version` in [`plugin.json`](.claude-plugin/plugin.json).
 
+## 0.1.3 - 2026-11-14
+
+### Changed
+
+- The theme logic moved to `shared/theme`, shared with `dracula-pro-theme`. No visible change.
+
 ## 0.1.2 - 2026-11-14
 
 ### Fixed

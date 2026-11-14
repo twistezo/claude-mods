@@ -1,17 +1,6 @@
 // Every color of the mod lives here. Values and names: https://draculatheme.com/spec
 
-type Hex = `#${string}`
-
-export type Palette = {
-  background: Hex
-  foreground: Hex
-  comment: Hex
-  red: Hex
-  orange: Hex
-  green: Hex
-  purple: Hex
-  pink: Hex
-}
+import type { Palette } from "./shared/create-theme"
 
 // Dracula Classic, the dark mode
 export const dracula: Palette = {

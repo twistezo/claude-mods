@@ -3,3 +3,5 @@
 **/make-colors.d.ts
 # Written by the engine on load
 **/.claude-plugin/types/
+# Copies of shared/, written by npm run sync
+plugins/*/hooks/shared/

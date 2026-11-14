@@ -2,9 +2,13 @@
 
 Mods for the Claude desktop app, published as a plugin marketplace.
 
-| Mod                                      | What it does                                                                                                                                                               |
-| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`dracula-theme`](plugins/dracula-theme) | [Dracula](https://draculatheme.com) colors: Dracula in dark mode, Alucard in light mode. Static background, no animation. [Changelog](plugins/dracula-theme/CHANGELOG.md). |
+| Mod                                              | Dark mode                                        | Light mode  | Changelog                                           |
+| ------------------------------------------------ | ------------------------------------------------ | ----------- | --------------------------------------------------- |
+| [`dracula-theme`](plugins/dracula-theme)         | [Dracula](https://draculatheme.com)              | Alucard     | [CHANGELOG](plugins/dracula-theme/CHANGELOG.md)     |
+| [`dracula-pro-theme`](plugins/dracula-pro-theme) | [Dracula PRO](https://draculatheme.com/pro) Base | Alucard PRO | [CHANGELOG](plugins/dracula-pro-theme/CHANGELOG.md) |
+
+> [!IMPORTANT]
+> `dracula-pro-theme` is for verified owners of an officially purchased [Dracula PRO](https://draculatheme.com/pro) license only. Buy Dracula PRO before you install it.
 
 ## Install
 
@@ -12,7 +16,9 @@ Desktop app (`/plugin` does not run there):
 
 1. Click **+** next to the prompt box, then **Plugins**.
 2. **Add marketplace**: `twistezo/claude-mods`.
-3. **Add plugin**: `dracula-theme`, then open a new session.
+3. **Add plugin**: `dracula-theme` or `dracula-pro-theme`, then open a new session.
+
+Install one of them: a session holds one theme, and the mod that sets it last wins.
 
 Terminal, then answer `y` to add the marketplace and pick a scope:
 
@@ -40,19 +46,34 @@ Add this folder as a local marketplace and install from it, once:
 After an edit, run `/reload-plugins` in the session. A local marketplace is read from this folder, so no reinstall is needed.
 
 ```bash
-# Type-check, lint and format check
+# Copy shared/theme into every mod, after any change there
+npm run sync
+```
+
+```bash
+# Sync check, type-check, lint and format check
 npm run check
 ```
 
 `npm run typecheck` needs `plugins/*/.claude-plugin/types/`, which Claude Code writes when it first loads the mod.
 
-When a mod changes, bump `version` in its `.claude-plugin/plugin.json` (installs from GitHub update only on a new version) and add an entry to its `CHANGELOG.md`.
+When a mod changes, bump `version` in its `.claude-plugin/plugin.json` (installs from GitHub update only on a new version) and add an entry to its `CHANGELOG.md`. A change in `shared/theme` changes every mod.
 
-## dracula-theme
+## Layout
 
-All colors come from [the Dracula spec](https://draculatheme.com/spec) and live in [`palette.ts`](plugins/dracula-theme/hooks/palette.ts). [`register.ts`](plugins/dracula-theme/hooks/register.ts) turns them into a theme with `makeColors`.
+| Path                              | What it holds                                                                                     |
+| --------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `shared/theme/create-theme.ts`    | Turns a dark and a light palette into a look: the logic every theme mod shares                    |
+| `shared/theme/make-colors.*`      | Copied unchanged from Claude Code's `plugin-authoring` skill; copy again when Claude Code updates |
+| `plugins/<mod>/hooks/palette.ts`  | The mod's colors, the only file a new theme needs to write                                        |
+| `plugins/<mod>/hooks/register.ts` | Sets the look at session start; the engine needs this hook written out in each mod                |
+| `plugins/<mod>/hooks/shared/`     | Copy of `shared/theme`, written by `npm run sync`: an installed mod gets only its own folder      |
 
-| App role                                                  | Dracula (dark)                          | Alucard (light)    |
+## How colors map
+
+Same for both mods. Names are the palette's.
+
+| App role                                                  | Dark                                    | Light              |
 | --------------------------------------------------------- | --------------------------------------- | ------------------ |
 | Page, cards, panels, menus                                | Background                              | Background         |
 | Text                                                      | Foreground                              | Foreground         |
@@ -63,14 +84,12 @@ All colors come from [the Dracula spec](https://draculatheme.com/spec) and live 
 | Pro                                                       | Pink                                    | Pink               |
 | Git added, removed, modified, merged, closed, conflicting | Green, Red, Orange, Purple, Red, Orange | same               |
 
-Three choices differ from the spec. The first two exist because the desktop app refuses a whole theme when any text is under 3:1:
+Three choices differ from the Dracula spec. The first two exist because the desktop app refuses a whole theme when any text is under 3:1:
 
-- Dark muted text is derived: Dracula's Comment is under 3:1 on the app's field and hover fills.
-- Danger, success and warning take the classic palette, not the spec's functional colors, which fall under 3:1.
-- Every surface stays on Background. In dark mode Background Light showed as a band under the prompt box and flashed over the conversation when switching sessions; in light mode the app needs raised surfaces as light as the page, and Background is Alucard's lightest.
-
-`hooks/make-colors.js` and `hooks/make-colors.d.ts` are copied unchanged from Claude Code's `plugin-authoring` skill. Copy them again when Claude Code updates.
+- Dark muted text is derived: Comment is under 3:1 on the app's field and hover fills.
+- Danger, success and warning take the palette's colors, not the spec's functional ones, which fall under 3:1.
+- Every surface stays on Background. In dark mode a lighter surface showed as a band under the prompt box and flashed over the conversation when switching sessions; in light mode the app needs raised surfaces as light as the page, and Background is the lightest.
 
 ## License
 
-[MIT](LICENSE). Colors: [Dracula Theme](https://draculatheme.com).
+[MIT](LICENSE), for the code. Colors: [Dracula Theme](https://draculatheme.com). Dracula PRO is a paid theme by its authors.
