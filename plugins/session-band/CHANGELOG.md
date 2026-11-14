@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.6 - 2026-11-14
+
+- Bars drawn with `▔`, which sits at the top of its row, so they hug the percent above.
+
 ## 0.1.5 - 2026-11-14
 
 - A bar of `━` under each percent, filled in the level's color; the row is centered vertically.

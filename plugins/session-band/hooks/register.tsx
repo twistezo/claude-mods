@@ -41,9 +41,10 @@ const BRANCH_MARK: string = "\u2003\u2387 "
 // A wide (em) space each side keeps the segments apart at any font size
 const SEPARATOR: string = "\u2003│\u2003"
 
-// The bar under a percent: a line of heavy dashes, as cells of text can draw nothing thinner
+// The bar under a percent: an upper one-eighth block sits at the top of its text row,
+// right under the figure; cells of text can draw nothing thinner
 const BAR_CELLS: number = 8
-const BAR_GLYPH: string = "\u2501"
+const BAR_GLYPH: string = "\u2594"
 // The theme's border color for the bar's empty part
 const BAR_TRACK: string = "promptBorder"
 
