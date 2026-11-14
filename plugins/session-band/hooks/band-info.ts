@@ -14,6 +14,14 @@ export type Segment = {
   value: string
   unit: string
   level: UsageLevel
+  // Drawn as a bar under the figure; null for a count, which has no bar
+  percent: number | null
+}
+
+// How many cells of a bar are filled and how many stay empty
+export type BarCells = {
+  filled: number
+  empty: number
 }
 
 // The desktop app's own meters: warning above 80%, danger from 100%
@@ -90,6 +98,16 @@ export const hasChanges = (
 ): changes is LineChanges =>
   changes !== null && (changes.added > 0 || changes.removed > 0)
 
+// A bar of `cells` cells for a percent, kept between empty and full past 100%
+export const barCells = (percent: number, cells: number): BarCells => {
+  const filled: number = Math.min(
+    cells,
+    Math.max(0, Math.round((percent / 100) * cells)),
+  )
+
+  return { filled, empty: cells - filled }
+}
+
 const usageSegment = (label: string, percent: number | null): Segment[] =>
   percent === null
     ? []
@@ -99,6 +117,7 @@ const usageSegment = (label: string, percent: number | null): Segment[] =>
           value: String(Math.round(percent)),
           unit: "%",
           level: usageLevel(percent),
+          percent,
         },
       ]
 
@@ -114,6 +133,7 @@ export const segments = (band: BandInfo): Segment[] => [
           value: String(band.agents),
           unit: "",
           level: "normal" as const,
+          percent: null,
         },
       ]
     : []),

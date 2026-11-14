@@ -5,6 +5,7 @@ import type { BandInfo } from "../types"
 
 import {
   activeAgents,
+  barCells,
   countLines,
   hasChanges,
   limitPercent,
@@ -133,6 +134,23 @@ describe("hasChanges shows the segment only for real changes", () => {
   })
 })
 
+describe("barCells fills a bar in proportion", () => {
+  test("fills cells in proportion, rounding to the nearest cell", () => {
+    expect(barCells(50, 8)).toEqual({ filled: 4, empty: 4 })
+    expect(barCells(61, 8)).toEqual({ filled: 5, empty: 3 })
+  })
+
+  test("is empty at 0% and full at 100%", () => {
+    expect(barCells(0, 8)).toEqual({ filled: 0, empty: 8 })
+    expect(barCells(100, 8)).toEqual({ filled: 8, empty: 0 })
+  })
+
+  test("stays full past 100% and empty below 0%", () => {
+    expect(barCells(130, 8)).toEqual({ filled: 8, empty: 0 })
+    expect(barCells(-5, 8)).toEqual({ filled: 0, empty: 8 })
+  })
+})
+
 describe("segments lists the figures with a reading", () => {
   const full: BandInfo = {
     path: "~/app",
@@ -153,15 +171,17 @@ describe("segments lists the figures with a reading", () => {
         sevenDay: null,
         agents: 0,
       }),
-    ).toEqual([{ label: "ctx", value: "31", unit: "%", level: "normal" }])
+    ).toEqual([
+      { label: "ctx", value: "31", unit: "%", level: "normal", percent: 30.5 },
+    ])
   })
 
   test("shows every figure in order, with its level", () => {
     expect(segments(full)).toEqual([
-      { label: "ctx", value: "64", unit: "%", level: "normal" },
-      { label: "5h", value: "86", unit: "%", level: "warning" },
-      { label: "7d", value: "100", unit: "%", level: "danger" },
-      { label: "agents", value: "2", unit: "", level: "normal" },
+      { label: "ctx", value: "64", unit: "%", level: "normal", percent: 64 },
+      { label: "5h", value: "86", unit: "%", level: "warning", percent: 86 },
+      { label: "7d", value: "100", unit: "%", level: "danger", percent: 100 },
+      { label: "agents", value: "2", unit: "", level: "normal", percent: null },
     ])
   })
 

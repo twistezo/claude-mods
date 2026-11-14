@@ -12,6 +12,7 @@ import type { BandInfo, LineChanges } from "../types"
 
 import {
   activeAgents,
+  barCells,
   countLines,
   hasChanges,
   limitPercent,
@@ -19,7 +20,7 @@ import {
   segments,
   shortenPath,
 } from "./band-info"
-import type { Segment, UsageLevel } from "./band-info"
+import type { BarCells, Segment, UsageLevel } from "./band-info"
 
 type Hex = `#${string}`
 
@@ -39,6 +40,18 @@ const BRANCH_MARK: string = "\u2003\u2387 "
 
 // A wide (em) space each side keeps the segments apart at any font size
 const SEPARATOR: string = "\u2003│\u2003"
+
+// The bar under a percent: a line of heavy dashes, as cells of text can draw nothing thinner
+const BAR_CELLS: number = 8
+const BAR_GLYPH: string = "\u2501"
+// The theme's border color for the bar's empty part
+const BAR_TRACK: string = "promptBorder"
+
+const BAR_COLOR: Record<UsageLevel, string> = {
+  normal: "suggestion",
+  warning: "warning",
+  danger: "error",
+}
 
 const LEVEL_COLOR: Record<UsageLevel, string> = {
   normal: "text",
@@ -250,7 +263,7 @@ export const register: Register = on => {
     const { Box, Text } = $.ui.resolve(e)
 
     return (
-      <Box>
+      <Box flexDirection="row" alignItems="center">
         <Text>
           <Text color="suggestion">{band.path}</Text>
           {band.branch !== null && (
@@ -261,30 +274,54 @@ export const register: Register = on => {
               </Text>
             </Text>
           )}
-          {hasChanges(band.changes) && (
-            <Text>
-              <Text color="inactive">{SEPARATOR}</Text>
-              <Text color="diffAdded">
-                +<Text weight="semibold">{band.changes.added}</Text>
-              </Text>{" "}
-              <Text color="diffRemoved">
-                -<Text weight="semibold">{band.changes.removed}</Text>
-              </Text>
+        </Text>
+        {hasChanges(band.changes) && (
+          <Text>
+            <Text color="inactive">{SEPARATOR}</Text>
+            <Text color="diffAdded">+</Text>
+            <Text color="diffAdded" weight="semibold">
+              {band.changes.added}
+            </Text>{" "}
+            <Text color="diffRemoved">-</Text>
+            <Text color="diffRemoved" weight="semibold">
+              {band.changes.removed}
             </Text>
-          )}
-          {segments(band).map((segment: Segment) => (
-            <Text key={segment.label}>
-              <Text color="inactive">
-                {SEPARATOR}
-                {segment.label}{" "}
-              </Text>
+          </Text>
+        )}
+        {segments(band).map((segment: Segment) => {
+          const figure = (
+            <Text>
+              <Text color="inactive">{segment.label} </Text>
               <Text color={LEVEL_COLOR[segment.level]} weight="semibold">
                 {segment.value}
               </Text>
               <Text color="inactive">{segment.unit}</Text>
             </Text>
-          ))}
-        </Text>
+          )
+          const bar: BarCells | null =
+            segment.percent === null
+              ? null
+              : barCells(segment.percent, BAR_CELLS)
+
+          return (
+            <Box key={segment.label} flexDirection="row" alignItems="center">
+              <Text color="inactive">{SEPARATOR}</Text>
+              {bar === null ? (
+                figure
+              ) : (
+                <Box flexDirection="column" alignItems="center">
+                  {figure}
+                  <Text>
+                    <Text color={BAR_COLOR[segment.level]}>
+                      {BAR_GLYPH.repeat(bar.filled)}
+                    </Text>
+                    <Text color={BAR_TRACK}>{BAR_GLYPH.repeat(bar.empty)}</Text>
+                  </Text>
+                </Box>
+              )}
+            </Box>
+          )
+        })}
       </Box>
     )
   })

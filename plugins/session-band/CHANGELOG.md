@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.5 - 2026-11-14
+
+- A bar of `━` under each percent, filled in the level's color; the row is centered vertically.
+- Git counts bold on one element, like the other numbers.
+
 ## 0.1.4 - 2026-11-14
 
 - Branch shown as `⎇ name` instead of `(name)`; the name's color and bold weight sit on one element, so it renders bold.
