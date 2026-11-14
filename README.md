@@ -2,9 +2,10 @@
 
 Mods for the Claude desktop app, published as a plugin marketplace.
 
-| Mod                                      | Dark mode                           | Light mode | Changelog                                       |
-| ---------------------------------------- | ----------------------------------- | ---------- | ----------------------------------------------- |
-| [`dracula-theme`](plugins/dracula-theme) | [Dracula](https://draculatheme.com) | Alucard    | [CHANGELOG](plugins/dracula-theme/CHANGELOG.md) |
+| Mod                                                          | Dark mode                           | Light mode      | Changelog                                             |
+| ------------------------------------------------------------ | ----------------------------------- | --------------- | ----------------------------------------------------- |
+| [`dracula-theme`](plugins/dracula-theme)                     | [Dracula](https://draculatheme.com) | Alucard         | [CHANGELOG](plugins/dracula-theme/CHANGELOG.md)       |
+| [`dracula-scene-theme`](plugins/dracula-scene-theme) (trial) | Dracula over an animated scene      | none, dark only | [CHANGELOG](plugins/dracula-scene-theme/CHANGELOG.md) |
 
 ## Install
 
@@ -12,7 +13,9 @@ Desktop app (`/plugin` does not run there):
 
 1. Click **+** next to the prompt box, then **Plugins**.
 2. **Add marketplace**: `twistezo/claude-mods`.
-3. **Add plugin**: `dracula-theme`, then open a new session.
+3. **Add plugin**: `dracula-theme` or `dracula-scene-theme`, then open a new session.
+
+Enable one of them: a session holds one theme, and the mod that sets it last wins.
 
 Terminal, then answer `y` to add the marketplace and pick a scope:
 
@@ -55,13 +58,14 @@ When a mod changes, bump `version` in its `.claude-plugin/plugin.json` (installs
 
 ## Layout
 
-| Path                              | What it holds                                                                                     |
-| --------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `shared/theme/create-theme.ts`    | Turns a dark and a light palette into a look: the logic every theme mod shares                    |
-| `shared/theme/make-colors.*`      | Copied unchanged from Claude Code's `plugin-authoring` skill; copy again when Claude Code updates |
-| `plugins/<mod>/hooks/palette.ts`  | The mod's colors, the only file a new theme needs to write                                        |
-| `plugins/<mod>/hooks/register.ts` | Sets the look at session start; the engine needs this hook written out in each mod                |
-| `plugins/<mod>/hooks/shared/`     | Copy of `shared/theme`, written by `npm run sync`: an installed mod gets only its own folder      |
+| Path                                         | What it holds                                                                                     |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `shared/theme/create-theme.ts`               | Turns a dark and a light palette into a look: the logic every theme mod shares                    |
+| `shared/theme/make-colors.*`                 | Copied unchanged from Claude Code's `plugin-authoring` skill; copy again when Claude Code updates |
+| `plugins/<mod>/hooks/palette.ts`             | The mod's colors, the only file a new theme needs to write                                        |
+| `plugins/<mod>/hooks/register.ts`            | Sets the look at session start; the engine needs this hook written out in each mod                |
+| `plugins/dracula-scene-theme/hooks/scene.ts` | The animated scene: an SVG with CSS animation, at most 131,072 characters                         |
+| `plugins/<mod>/hooks/shared/`                | Copy of `shared/theme`, written by `npm run sync`: an installed mod gets only its own folder      |
 
 ## How colors map
 

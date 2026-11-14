@@ -11,6 +11,11 @@
       "name": "dracula-theme",
       "source": "./plugins/dracula-theme",
       "description": "Dracula (dark) and Alucard (light) colors for the Claude desktop app"
+    },
+    {
+      "name": "dracula-scene-theme",
+      "source": "./plugins/dracula-scene-theme",
+      "description": "Trial: Dracula colors over a slowly moving purple and pink scene, for dark mode in the Claude desktop app"
     }
   ]
 }
