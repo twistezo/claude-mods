@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.8 - 2026-11-14
+
+- Above 80%, a rate limit shows its reset: `5h 86% resets in 2h 14m`, `7d 92% resets Sun 15:00` (24-hour local time).
+
 ## 0.1.7 - 2026-11-14
 
 - Back to 0.1.4 exactly: bars under percents removed, as a bar takes a full text row and could not sit tight and centered.

@@ -15,6 +15,7 @@ import {
   countLines,
   hasChanges,
   limitPercent,
+  limitResetsAt,
   parseShortstat,
   segments,
   shortenPath,
@@ -198,6 +199,8 @@ const refresh = async (
     context: usage.context.percent ?? null,
     fiveHour: limitPercent(usage.rateLimits, "five_hour"),
     sevenDay: limitPercent(usage.rateLimits, "seven_day"),
+    fiveHourResetsAt: limitResetsAt(usage.rateLimits, "five_hour"),
+    sevenDayResetsAt: limitResetsAt(usage.rateLimits, "seven_day"),
     agents: activeAgents(agents.map(agent => agent.status)),
   }
 
@@ -248,6 +251,7 @@ export const register: Register = on => {
     }
 
     const { Box, Text } = $.ui.resolve(e)
+    const now: number = await $.clock.now()
 
     return (
       <Box>
@@ -272,7 +276,7 @@ export const register: Register = on => {
               </Text>
             </Text>
           )}
-          {segments(band).map((segment: Segment) => (
+          {segments(band, now).map((segment: Segment) => (
             <Text key={segment.label}>
               <Text color="inactive">
                 {SEPARATOR}
@@ -282,6 +286,14 @@ export const register: Register = on => {
                 {segment.value}
               </Text>
               <Text color="inactive">{segment.unit}</Text>
+              {segment.reset !== null && (
+                <Text>
+                  <Text color="inactive"> {segment.reset.label} </Text>
+                  <Text color="text" weight="semibold">
+                    {segment.reset.value}
+                  </Text>
+                </Text>
+              )}
             </Text>
           ))}
         </Text>

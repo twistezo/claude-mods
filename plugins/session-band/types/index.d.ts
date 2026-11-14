@@ -17,6 +17,9 @@ export type BandInfo = {
   // Percent used of the five-hour and seven-day rate-limit windows, or null without a reading
   fiveHour: number | null
   sevenDay: number | null
+  // When each window resets, as ISO 8601, or null without a reading
+  fiveHourResetsAt: string | null
+  sevenDayResetsAt: string | null
   // Agents working in the background right now
   agents: number
 }

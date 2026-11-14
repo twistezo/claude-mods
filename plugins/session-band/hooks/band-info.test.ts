@@ -6,8 +6,11 @@ import type { BandInfo } from "../types"
 import {
   activeAgents,
   countLines,
+  formatCountdown,
+  formatResetDay,
   hasChanges,
   limitPercent,
+  limitResetsAt,
   parseShortstat,
   segments,
   shortenPath,
@@ -133,6 +136,49 @@ describe("hasChanges shows the segment only for real changes", () => {
   })
 })
 
+// Local times, so the expected days and hours hold in any time zone
+const NOW: number = new Date(2026, 10, 15, 12, 0).getTime()
+const IN_2H_14M: string = new Date(NOW + (2 * 60 + 14) * 60_000).toISOString()
+const SUNDAY_15: string = new Date(2026, 10, 15, 15, 0).toISOString()
+
+describe("formatCountdown shows hours and minutes left", () => {
+  test("shows hours and minutes", () => {
+    expect(formatCountdown((2 * 60 + 14) * 60_000)).toBe("2h 14m")
+  })
+
+  test("shows minutes alone under an hour, a partial minute as whole", () => {
+    expect(formatCountdown(14 * 60_000)).toBe("14m")
+    expect(formatCountdown(30_000)).toBe("1m")
+  })
+
+  test("shows 0m once the reset has passed", () => {
+    expect(formatCountdown(-5_000)).toBe("0m")
+  })
+})
+
+describe("formatResetDay shows the day and a 24-hour time", () => {
+  test("shows the short day and hours past noon without AM or PM", () => {
+    expect(formatResetDay(new Date(SUNDAY_15))).toBe("Sun 15:00")
+  })
+
+  test("pads morning hours to two digits", () => {
+    expect(formatResetDay(new Date(2026, 10, 16, 9, 5))).toBe("Mon 09:05")
+  })
+})
+
+describe("limitResetsAt picks one window's reset time", () => {
+  test("returns the window's reset time, or null without one", () => {
+    const limits: SessionRateLimit[] = [
+      { kind: "five_hour", percentUsed: 100, resetsAt: IN_2H_14M },
+      { kind: "seven_day", percentUsed: 40 },
+    ]
+
+    expect(limitResetsAt(limits, "five_hour")).toBe(IN_2H_14M)
+    expect(limitResetsAt(limits, "seven_day")).toBe(null)
+    expect(limitResetsAt([], "five_hour")).toBe(null)
+  })
+})
+
 describe("segments lists the figures with a reading", () => {
   const full: BandInfo = {
     path: "~/app",
@@ -140,28 +186,75 @@ describe("segments lists the figures with a reading", () => {
     changes: { added: 347, removed: 5 },
     context: 64,
     fiveHour: 86,
-    sevenDay: 100,
+    sevenDay: 40,
+    fiveHourResetsAt: IN_2H_14M,
+    sevenDayResetsAt: SUNDAY_15,
     agents: 2,
   }
 
   test("rounds percents to whole numbers", () => {
-    expect(
-      segments({
-        ...full,
-        context: 30.5,
-        fiveHour: null,
-        sevenDay: null,
-        agents: 0,
-      }),
-    ).toEqual([{ label: "ctx", value: "31", unit: "%", level: "normal" }])
+    const band: BandInfo = {
+      ...full,
+      context: 30.5,
+      fiveHour: null,
+      sevenDay: null,
+      agents: 0,
+    }
+
+    expect(segments(band, NOW)).toEqual([
+      { label: "ctx", value: "31", unit: "%", level: "normal", reset: null },
+    ])
   })
 
-  test("shows every figure in order, with its level", () => {
-    expect(segments(full)).toEqual([
-      { label: "ctx", value: "64", unit: "%", level: "normal" },
-      { label: "5h", value: "86", unit: "%", level: "warning" },
-      { label: "7d", value: "100", unit: "%", level: "danger" },
-      { label: "agents", value: "2", unit: "", level: "normal" },
+  test("shows every figure in order, with its level, and a reset from above 80%", () => {
+    expect(segments(full, NOW)).toEqual([
+      { label: "ctx", value: "64", unit: "%", level: "normal", reset: null },
+      {
+        label: "5h",
+        value: "86",
+        unit: "%",
+        level: "warning",
+        reset: { label: "resets in", value: "2h 14m" },
+      },
+      { label: "7d", value: "40", unit: "%", level: "normal", reset: null },
+      { label: "agents", value: "2", unit: "", level: "normal", reset: null },
+    ])
+  })
+
+  test("shows the reset at 100% too: a countdown for 5h, a day for 7d", () => {
+    const band: BandInfo = { ...full, fiveHour: 100, sevenDay: 103, agents: 0 }
+
+    expect(segments(band, NOW).slice(1)).toEqual([
+      {
+        label: "5h",
+        value: "100",
+        unit: "%",
+        level: "danger",
+        reset: { label: "resets in", value: "2h 14m" },
+      },
+      {
+        label: "7d",
+        value: "103",
+        unit: "%",
+        level: "danger",
+        reset: { label: "resets", value: "Sun 15:00" },
+      },
+    ])
+  })
+
+  test("shows no reset at or below 80%, or without a reset time", () => {
+    const band: BandInfo = {
+      ...full,
+      fiveHour: 80,
+      sevenDay: 100,
+      sevenDayResetsAt: "not a date",
+    }
+
+    expect(segments(band, NOW).map(segment => segment.reset)).toEqual([
+      null,
+      null,
+      null,
+      null,
     ])
   })
 
@@ -174,6 +267,6 @@ describe("segments lists the figures with a reading", () => {
       agents: 0,
     }
 
-    expect(segments(empty)).toEqual([])
+    expect(segments(empty, NOW)).toEqual([])
   })
 })

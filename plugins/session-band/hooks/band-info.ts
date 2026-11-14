@@ -14,6 +14,14 @@ export type Segment = {
   value: string
   unit: string
   level: UsageLevel
+  // Shown once a window turns orange (above 80%): `resets in 2h 14m`, `resets Sun 15:00`
+  reset: ResetNote | null
+}
+
+// A muted label and a bold time, after a window above 80%
+export type ResetNote = {
+  label: string
+  value: string
 }
 
 // The desktop app's own meters: warning above 80%, danger from 100%
@@ -54,6 +62,51 @@ export const limitPercent = (
 ): number | null =>
   rateLimits.find(limit => limit.kind === kind)?.percentUsed ?? null
 
+export const limitResetsAt = (
+  rateLimits: readonly SessionRateLimit[],
+  kind: RateLimitKind,
+): string | null =>
+  rateLimits.find(limit => limit.kind === kind)?.resetsAt ?? null
+
+// 2h 14m, or 14m under an hour; a partial minute counts as a whole one
+export const formatCountdown = (milliseconds: number): string => {
+  const minutes: number = Math.max(0, Math.ceil(milliseconds / 60_000))
+  const hours: number = Math.floor(minutes / 60)
+
+  return hours > 0 ? `${hours}h ${minutes % 60}m` : `${minutes}m`
+}
+
+// Sun 15:00: the desktop app's day, with a 24-hour local time
+export const formatResetDay = (date: Date): string => {
+  const day: string = date.toLocaleString("en-US", { weekday: "short" })
+  const time: string = date.toLocaleString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  })
+
+  return `${day} ${time}`
+}
+
+// How a window shows its reset: a countdown for the five-hour one, a day for the week
+type ResetStyle = "countdown" | "day"
+
+const resetNote = (
+  resetsAt: string | null,
+  style: ResetStyle,
+  now: number,
+): ResetNote | null => {
+  const at: number = resetsAt === null ? Number.NaN : Date.parse(resetsAt)
+
+  if (Number.isNaN(at)) {
+    return null
+  }
+
+  return style === "countdown"
+    ? { label: "resets in", value: formatCountdown(at - now) }
+    : { label: "resets", value: formatResetDay(new Date(at)) }
+}
+
 export const activeAgents = (statuses: readonly AgentStatus[]): number =>
   statuses.filter(status => ACTIVE_STATUSES.includes(status)).length
 
@@ -90,7 +143,11 @@ export const hasChanges = (
 ): changes is LineChanges =>
   changes !== null && (changes.added > 0 || changes.removed > 0)
 
-const usageSegment = (label: string, percent: number | null): Segment[] =>
+const usageSegment = (
+  label: string,
+  percent: number | null,
+  reset: ResetNote | null = null,
+): Segment[] =>
   percent === null
     ? []
     : [
@@ -99,14 +156,24 @@ const usageSegment = (label: string, percent: number | null): Segment[] =>
           value: String(Math.round(percent)),
           unit: "%",
           level: usageLevel(percent),
+          reset: usageLevel(percent) === "normal" ? null : reset,
         },
       ]
 
-// The figures to show, in order, leaving out the ones with no reading
-export const segments = (band: BandInfo): Segment[] => [
+// The figures to show, in order, leaving out the ones with no reading.
+// `now` in milliseconds since the epoch, for the countdown to a reset
+export const segments = (band: BandInfo, now: number): Segment[] => [
   ...usageSegment("ctx", band.context),
-  ...usageSegment("5h", band.fiveHour),
-  ...usageSegment("7d", band.sevenDay),
+  ...usageSegment(
+    "5h",
+    band.fiveHour,
+    resetNote(band.fiveHourResetsAt, "countdown", now),
+  ),
+  ...usageSegment(
+    "7d",
+    band.sevenDay,
+    resetNote(band.sevenDayResetsAt, "day", now),
+  ),
   ...(band.agents > 0
     ? [
         {
@@ -114,6 +181,7 @@ export const segments = (band: BandInfo): Segment[] => [
           value: String(band.agents),
           unit: "",
           level: "normal" as const,
+          reset: null,
         },
       ]
     : []),
