@@ -15,7 +15,7 @@
     {
       "name": "dracula-scene-theme",
       "source": "./plugins/dracula-scene-theme",
-      "description": "Trial: Dracula colors over a slowly moving purple and pink scene, for dark mode in the Claude desktop app"
+      "description": "Dracula colors over a slowly moving purple and pink scene, for dark mode in the Claude desktop app"
     }
   ]
 }
