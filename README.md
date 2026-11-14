@@ -2,13 +2,9 @@
 
 Mods for the Claude desktop app, published as a plugin marketplace.
 
-| Mod                                              | Dark mode                                        | Light mode  | Changelog                                           |
-| ------------------------------------------------ | ------------------------------------------------ | ----------- | --------------------------------------------------- |
-| [`dracula-theme`](plugins/dracula-theme)         | [Dracula](https://draculatheme.com)              | Alucard     | [CHANGELOG](plugins/dracula-theme/CHANGELOG.md)     |
-| [`dracula-pro-theme`](plugins/dracula-pro-theme) | [Dracula PRO](https://draculatheme.com/pro) Base | Alucard PRO | [CHANGELOG](plugins/dracula-pro-theme/CHANGELOG.md) |
-
-> [!IMPORTANT]
-> `dracula-pro-theme` is for verified owners of an officially purchased [Dracula PRO](https://draculatheme.com/pro) license only. Buy Dracula PRO before you install it.
+| Mod                                      | Dark mode                           | Light mode | Changelog                                       |
+| ---------------------------------------- | ----------------------------------- | ---------- | ----------------------------------------------- |
+| [`dracula-theme`](plugins/dracula-theme) | [Dracula](https://draculatheme.com) | Alucard    | [CHANGELOG](plugins/dracula-theme/CHANGELOG.md) |
 
 ## Install
 
@@ -16,9 +12,7 @@ Desktop app (`/plugin` does not run there):
 
 1. Click **+** next to the prompt box, then **Plugins**.
 2. **Add marketplace**: `twistezo/claude-mods`.
-3. **Add plugin**: `dracula-theme` or `dracula-pro-theme`, then open a new session.
-
-Install one of them: a session holds one theme, and the mod that sets it last wins.
+3. **Add plugin**: `dracula-theme`, then open a new session.
 
 Terminal, then answer `y` to add the marketplace and pick a scope:
 
@@ -71,7 +65,7 @@ When a mod changes, bump `version` in its `.claude-plugin/plugin.json` (installs
 
 ## How colors map
 
-Same for both mods. Names are the palette's.
+Names are the palette's.
 
 | App role                                                  | Dark                                    | Light              |
 | --------------------------------------------------------- | --------------------------------------- | ------------------ |
@@ -92,4 +86,4 @@ Three choices differ from the Dracula spec. The first two exist because the desk
 
 ## License
 
-[MIT](LICENSE), for the code. Colors: [Dracula Theme](https://draculatheme.com). Dracula PRO is a paid theme by its authors.
+[MIT](LICENSE), for the code. Colors: [Dracula Theme](https://draculatheme.com).

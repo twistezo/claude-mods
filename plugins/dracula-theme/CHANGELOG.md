@@ -6,7 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions match
 
 ### Changed
 
-- The theme logic moved to `shared/theme`, shared with `dracula-pro-theme`. No visible change.
+- The theme logic moved to `shared/theme`, reusable by other theme mods. No visible change.
 
 ## 0.1.2 - 2026-11-14
 

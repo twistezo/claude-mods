@@ -11,11 +11,6 @@
       "name": "dracula-theme",
       "source": "./plugins/dracula-theme",
       "description": "Dracula (dark) and Alucard (light) colors for the Claude desktop app"
-    },
-    {
-      "name": "dracula-pro-theme",
-      "source": "./plugins/dracula-pro-theme",
-      "description": "Dracula PRO (dark) and Alucard PRO (light) colors for the Claude desktop app. Only for verified owners of an officially purchased Dracula PRO license"
     }
   ]
 }

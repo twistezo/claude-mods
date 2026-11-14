@@ -6,10 +6,9 @@ Theme mods for the Claude desktop app. Layout, scripts and color mapping: [READM
 
 Every color decision follows the theme's own spec. Where the spec gives a color a role (error, string, keyword, border), use it in that role.
 
-| Mod                 | Source of truth                                                                                                                             |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `dracula-theme`     | https://draculatheme.com/spec, with roles from https://draculatheme.com/spec#syntax-highlighting-rules                                      |
-| `dracula-pro-theme` | The Dracula PRO palette and rules the user provides. Dracula PRO is paid and not public: ask the user for it, and use only values they gave |
+| Mod             | Source of truth                                                                                        |
+| --------------- | ------------------------------------------------------------------------------------------------------ |
+| `dracula-theme` | https://draculatheme.com/spec, with roles from https://draculatheme.com/spec#syntax-highlighting-rules |
 
 A spec value can only give way to the desktop app's hard limits below. Record each such choice in README's "How colors map".
 
