@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.7 - 2026-11-14
+
+- Back to 0.1.4 exactly: bars under percents removed, as a bar takes a full text row and could not sit tight and centered.
+
 ## 0.1.6 - 2026-11-14
 
 - Bars drawn with `▔`, which sits at the top of its row, so they hug the percent above.

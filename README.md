@@ -17,8 +17,6 @@ Desktop app: **+** → **Plugins** → add marketplace `twistezo/claude-mods` �
 
 ## Update
 
-Type in the prompt box, starting with `!`, then run `/reload-plugins` or open a new session:
-
 ```bash
 # <mod>: dracula-theme, dracula-scene-theme or session-band; repeat the update for each installed mod
 claude plugin marketplace update claude-mods && claude plugin update <mod>@claude-mods
