@@ -5,6 +5,7 @@ import type {
   EngineInterface,
   ProcessRunResult,
   Register,
+  SessionRateLimit,
   SessionUsage,
   TextProps,
 } from "claude-code"
@@ -20,6 +21,7 @@ import {
   parseShortstat,
   segments,
   shortenPath,
+  storedRateLimits,
 } from "./band-info"
 import type { Segment, UsageLevel } from "./band-info"
 
@@ -188,6 +190,25 @@ const readChanges = async (
   }
 }
 
+// The store key for the last rate limits any session saw
+const RATE_LIMITS_KEY: string = "rateLimits"
+
+// This session's rate limits, kept for the next session; until this session has a reading
+// of its own (a new conversation before its first response), the last ones kept. Limits
+// belong to the account, and a reset that has passed still reads 0%
+const currentRateLimits = async (
+  $: EngineInterface,
+  fresh: readonly SessionRateLimit[],
+): Promise<readonly SessionRateLimit[]> => {
+  if (fresh.length > 0) {
+    await $.store.set(RATE_LIMITS_KEY, fresh)
+
+    return fresh
+  }
+
+  return storedRateLimits(await $.store.get(RATE_LIMITS_KEY))
+}
+
 // Reads the folder, branch and agents, and keeps them with the usage figures given
 const refresh = async (
   $: EngineInterface,
@@ -196,16 +217,20 @@ const refresh = async (
   const cwd: string = await $.session.cwd()
   const home: string | undefined = await $.env.get("HOME")
   const agents: AgentInfo[] = await $.agent.list()
+  const rateLimits: readonly SessionRateLimit[] = await currentRateLimits(
+    $,
+    usage.rateLimits,
+  )
 
   const band: BandInfo = {
     path: shortenPath(cwd, home),
     branch: await readBranch($, cwd),
     changes: await readChanges($, cwd),
     context: usage.context.percent ?? null,
-    fiveHour: limitPercent(usage.rateLimits, "five_hour"),
-    sevenDay: limitPercent(usage.rateLimits, "seven_day"),
-    fiveHourResetsAt: limitResetsAt(usage.rateLimits, "five_hour"),
-    sevenDayResetsAt: limitResetsAt(usage.rateLimits, "seven_day"),
+    fiveHour: limitPercent(rateLimits, "five_hour"),
+    sevenDay: limitPercent(rateLimits, "seven_day"),
+    fiveHourResetsAt: limitResetsAt(rateLimits, "five_hour"),
+    sevenDayResetsAt: limitResetsAt(rateLimits, "seven_day"),
     agents: activeAgents(agents.map(agent => agent.status)),
   }
 

@@ -1,6 +1,6 @@
 {
   "name": "session-band",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "description": "A row above the prompt with the folder, git branch, context use and rate limits",
   "author": {
     "name": "twistezo"

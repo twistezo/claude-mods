@@ -118,6 +118,25 @@ export const windowPercent = (
   return percent !== null && !Number.isNaN(at) && at <= now ? 0 : percent
 }
 
+// Rate limits read back from the mod's store: well-formed entries only, as an older or
+// broken write may have left anything there
+export const storedRateLimits = (value: unknown): SessionRateLimit[] => {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value.filter(
+    (entry: unknown): entry is SessionRateLimit =>
+      typeof entry === "object" &&
+      entry !== null &&
+      typeof (entry as Record<string, unknown>).kind === "string" &&
+      typeof (entry as Record<string, unknown>).percentUsed === "number" &&
+      ["string", "undefined"].includes(
+        typeof (entry as Record<string, unknown>).resetsAt,
+      ),
+  )
+}
+
 export const activeAgents = (statuses: readonly AgentStatus[]): number =>
   statuses.filter(status => ACTIVE_STATUSES.includes(status)).length
 

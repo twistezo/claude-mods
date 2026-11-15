@@ -14,6 +14,7 @@ import {
   parseShortstat,
   segments,
   shortenPath,
+  storedRateLimits,
   usageLevel,
   windowPercent,
 } from "./band-info"
@@ -305,5 +306,34 @@ describe("windowPercent empties a window once its reset has passed", () => {
     expect(segments(band, NOW)).toEqual([
       { label: "5h", value: "0", unit: "%", level: "normal", reset: null },
     ])
+  })
+})
+
+describe("storedRateLimits reads back the last kept rate limits", () => {
+  test("keeps well-formed entries, with or without a reset time", () => {
+    const kept: SessionRateLimit[] = [
+      { kind: "five_hour", percentUsed: 42, resetsAt: IN_2H_14M },
+      { kind: "seven_day", percentUsed: 30.5 },
+    ]
+
+    expect(storedRateLimits(kept)).toEqual(kept)
+  })
+
+  test("drops malformed entries", () => {
+    expect(
+      storedRateLimits([
+        { kind: "five_hour", percentUsed: "42" },
+        { percentUsed: 10 },
+        { kind: "seven_day", percentUsed: 5, resetsAt: 123 },
+        null,
+        "five_hour",
+        { kind: "seven_day", percentUsed: 7 },
+      ]),
+    ).toEqual([{ kind: "seven_day", percentUsed: 7 }])
+  })
+
+  test("reads anything that is not a list as no limits", () => {
+    expect(storedRateLimits(undefined)).toEqual([])
+    expect(storedRateLimits({ kind: "five_hour" })).toEqual([])
   })
 })

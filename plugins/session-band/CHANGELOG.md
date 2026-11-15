@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.12 - 2026-11-15
+
+- A new conversation shows `5h` and `1w` at once: the last rate limits any session saw are kept and shown until its first response.
+
 ## 0.1.11 - 2026-11-15
 
 - The branch symbol `⎇` takes the labels' smaller size.
