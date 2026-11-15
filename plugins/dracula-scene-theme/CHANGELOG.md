@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4 - 2026-11-15
+
+- `ARCHITECTURE.md`: where the colors and scene come from, when they apply, and the UI/UX flow; no visible change.
+
 ## 0.1.3 - 2026-11-14
 
 - Glows only drift, no longer grow and shrink.

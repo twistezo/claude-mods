@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.6 - 2026-11-15
+
+- `ARCHITECTURE.md`: where the colors come from, when they apply, and the UI/UX flow; no visible change.
+
 ## 0.1.5 - 2026-11-14
 
 - Shared theme code: optional backdrop, clearer names; no visible change.
