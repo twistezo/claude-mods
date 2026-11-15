@@ -107,6 +107,17 @@ const resetNote = (
     : { label: "resets", value: formatResetDay(new Date(at)) }
 }
 
+// A window whose reset time has passed is empty again: the last response's percent is stale
+export const windowPercent = (
+  percent: number | null,
+  resetsAt: string | null,
+  now: number,
+): number | null => {
+  const at: number = resetsAt === null ? Number.NaN : Date.parse(resetsAt)
+
+  return percent !== null && !Number.isNaN(at) && at <= now ? 0 : percent
+}
+
 export const activeAgents = (statuses: readonly AgentStatus[]): number =>
   statuses.filter(status => ACTIVE_STATUSES.includes(status)).length
 
@@ -166,12 +177,12 @@ export const segments = (band: BandInfo, now: number): Segment[] => [
   ...usageSegment("ctx", band.context),
   ...usageSegment(
     "5h",
-    band.fiveHour,
+    windowPercent(band.fiveHour, band.fiveHourResetsAt, now),
     resetNote(band.fiveHourResetsAt, "countdown", now),
   ),
   ...usageSegment(
     "7d",
-    band.sevenDay,
+    windowPercent(band.sevenDay, band.sevenDayResetsAt, now),
     resetNote(band.sevenDayResetsAt, "day", now),
   ),
   ...(band.agents > 0

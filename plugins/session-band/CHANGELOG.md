@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.9 - 2026-11-15
+
+- A rate limit whose reset time has passed reads 0% instead of the last response's stale percent; no more `resets in 0m`.
+
 ## 0.1.8 - 2026-11-14
 
 - Above 80%, a rate limit shows its reset: `5h 86% resets in 2h 14m`, `7d 92% resets Sun 15:00` (24-hour local time).

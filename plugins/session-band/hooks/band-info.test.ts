@@ -15,6 +15,7 @@ import {
   segments,
   shortenPath,
   usageLevel,
+  windowPercent,
 } from "./band-info"
 
 describe("usageLevel follows the desktop app's meters", () => {
@@ -268,5 +269,41 @@ describe("segments lists the figures with a reading", () => {
     }
 
     expect(segments(empty, NOW)).toEqual([])
+  })
+})
+
+describe("windowPercent empties a window once its reset has passed", () => {
+  test("keeps the percent before the reset", () => {
+    expect(windowPercent(97, IN_2H_14M, NOW)).toBe(97)
+  })
+
+  test("reads 0% once the reset time has passed", () => {
+    const passed: string = new Date(NOW - 60_000).toISOString()
+
+    expect(windowPercent(97, passed, NOW)).toBe(0)
+  })
+
+  test("keeps the percent without a reset time, and null without a reading", () => {
+    expect(windowPercent(97, null, NOW)).toBe(97)
+    expect(windowPercent(97, "not a date", NOW)).toBe(97)
+    expect(windowPercent(null, IN_2H_14M, NOW)).toBe(null)
+  })
+
+  test("a passed 5h reset shows 0% with no reset note", () => {
+    const band: BandInfo = {
+      path: "~/app",
+      branch: "main",
+      changes: null,
+      context: null,
+      fiveHour: 97,
+      sevenDay: null,
+      fiveHourResetsAt: new Date(NOW - 60_000).toISOString(),
+      sevenDayResetsAt: null,
+      agents: 0,
+    }
+
+    expect(segments(band, NOW)).toEqual([
+      { label: "5h", value: "0", unit: "%", level: "normal", reset: null },
+    ])
   })
 })
