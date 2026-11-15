@@ -181,7 +181,7 @@ export const segments = (band: BandInfo, now: number): Segment[] => [
     resetNote(band.fiveHourResetsAt, "countdown", now),
   ),
   ...usageSegment(
-    "7d",
+    "1w",
     windowPercent(band.sevenDay, band.sevenDayResetsAt, now),
     resetNote(band.sevenDayResetsAt, "day", now),
   ),

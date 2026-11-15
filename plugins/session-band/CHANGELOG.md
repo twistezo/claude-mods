@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.10 - 2026-11-15
+
+- Labels (`ctx`, `5h`, `1w`, `agents`, `resets in`) one size smaller than the figures.
+- The weekly limit reads `1w` instead of `7d`.
+
 ## 0.1.9 - 2026-11-15
 
 - A rate limit whose reset time has passed reads 0% instead of the last response's stale percent; no more `resets in 0m`.

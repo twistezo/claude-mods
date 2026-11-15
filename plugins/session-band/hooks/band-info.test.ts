@@ -217,12 +217,12 @@ describe("segments lists the figures with a reading", () => {
         level: "warning",
         reset: { label: "resets in", value: "2h 14m" },
       },
-      { label: "7d", value: "40", unit: "%", level: "normal", reset: null },
+      { label: "1w", value: "40", unit: "%", level: "normal", reset: null },
       { label: "agents", value: "2", unit: "", level: "normal", reset: null },
     ])
   })
 
-  test("shows the reset at 100% too: a countdown for 5h, a day for 7d", () => {
+  test("shows the reset at 100% too: a countdown for 5h, a day for 1w", () => {
     const band: BandInfo = { ...full, fiveHour: 100, sevenDay: 103, agents: 0 }
 
     expect(segments(band, NOW).slice(1)).toEqual([
@@ -234,7 +234,7 @@ describe("segments lists the figures with a reading", () => {
         reset: { label: "resets in", value: "2h 14m" },
       },
       {
-        label: "7d",
+        label: "1w",
         value: "103",
         unit: "%",
         level: "danger",

@@ -6,6 +6,7 @@ import type {
   ProcessRunResult,
   Register,
   SessionUsage,
+  TextProps,
 } from "claude-code"
 
 import type { BandInfo, LineChanges } from "../types"
@@ -40,6 +41,9 @@ const BRANCH_MARK: string = "\u2003\u2387 "
 
 // A wide (em) space each side keeps the segments apart at any font size
 const SEPARATOR: string = "\u2003│\u2003"
+
+// Labels one step smaller than the figures they name
+const LABEL_SIZE: TextProps["size"] = "footnote"
 
 const LEVEL_COLOR: Record<UsageLevel, string> = {
   normal: "text",
@@ -278,8 +282,8 @@ export const register: Register = on => {
           )}
           {segments(band, now).map((segment: Segment) => (
             <Text key={segment.label}>
-              <Text color="inactive">
-                {SEPARATOR}
+              <Text color="inactive">{SEPARATOR}</Text>
+              <Text color="inactive" size={LABEL_SIZE}>
                 {segment.label}{" "}
               </Text>
               <Text color={LEVEL_COLOR[segment.level]} weight="semibold">
@@ -288,7 +292,10 @@ export const register: Register = on => {
               <Text color="inactive">{segment.unit}</Text>
               {segment.reset !== null && (
                 <Text>
-                  <Text color="inactive"> {segment.reset.label} </Text>
+                  <Text color="inactive" size={LABEL_SIZE}>
+                    {" "}
+                    {segment.reset.label}{" "}
+                  </Text>
                   <Text color="text" weight="semibold">
                     {segment.reset.value}
                   </Text>
