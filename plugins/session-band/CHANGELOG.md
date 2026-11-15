@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.11 - 2026-11-15
+
+- The branch symbol `⎇` takes the labels' smaller size.
+
 ## 0.1.10 - 2026-11-15
 
 - Labels (`ctx`, `5h`, `1w`, `agents`, `resets in`) one size smaller than the figures.
