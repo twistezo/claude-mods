@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.13 - 2026-11-15
+
+- Line counts come from `git diff --numstat`, so a translated git no longer reads every change as 0.
+- `5h` and `1w` kept from an earlier session are drawn muted until this session's first response.
+- Kept rate limits are saved only when a reading moves, merged by window, so an older session no longer overwrites a newer reading and a missing window no longer drops the kept one.
+- A kept rate limit without a reset time is ignored, so it can never stay forever.
+- Untracked files whose names start or end with a space are counted.
+- `ARCHITECTURE.md`: where each segment's data comes from, when it refreshes, and the UI/UX flow.
+
 ## 0.1.12 - 2026-11-15
 
 - A new conversation shows `5h` and `1w` at once: the last rate limits any session saw are kept and shown until its first response.

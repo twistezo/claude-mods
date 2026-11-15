@@ -1,12 +1,14 @@
 // Copies shared/theme into every theme mod's hooks/shared: an installed mod gets only its own folder.
+// Files in hooks/shared that are not in shared/theme are deleted.
 // Usage: node scripts/sync-shared.ts [--check]
-// --check writes nothing and exits 1 when a copy is missing or out of date
+// --check writes nothing and exits 1 when a copy is missing, out of date or extra
 
 import {
   existsSync,
   mkdirSync,
   readdirSync,
   readFileSync,
+  rmSync,
   writeFileSync,
 } from "node:fs"
 import { join } from "node:path"
@@ -34,11 +36,17 @@ for (const pluginDir of pluginDirs) {
     ? readdirSync(targetDir).filter(file => !sourceFiles.includes(file))
     : []
 
-  stale.push(
-    ...extraFiles.map(
-      file => `${join(targetDir, file)} (not in ${SOURCE_DIR})`,
-    ),
-  )
+  for (const file of extraFiles) {
+    const extra: string = join(targetDir, file)
+
+    if (isCheck) {
+      stale.push(`${extra} (not in ${SOURCE_DIR})`)
+      continue
+    }
+
+    rmSync(extra, { recursive: true })
+    console.log(`deleted ${extra}`)
+  }
 
   for (const file of sourceFiles) {
     const source: string = readFileSync(join(SOURCE_DIR, file), "utf8")

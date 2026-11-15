@@ -1,4 +1,4 @@
-// Lines added and removed, as `git diff --shortstat` counts them
+// Lines added and removed, as `git diff --numstat` counts them
 export type LineChanges = {
   added: number
   removed: number
@@ -10,7 +10,8 @@ export type BandInfo = {
   path: string
   // The current branch, a short commit id when detached, or null outside a repository
   branch: string | null
-  // Lines added and removed since the last commit, or null outside a repository
+  // Lines added and removed against origin, as `readChanges` counts them, or null outside a
+  // repository
   changes: LineChanges | null
   // Percent of the context window in use, or null before the first response
   context: number | null
@@ -20,6 +21,8 @@ export type BandInfo = {
   // When each window resets, as ISO 8601, or null without a reading
   fiveHourResetsAt: string | null
   sevenDayResetsAt: string | null
+  // The rate limits come from an earlier session, as this one has no reading yet
+  rateLimitsCached: boolean
   // Agents working in the background right now
   agents: number
 }

@@ -18,7 +18,8 @@ import {
   hasChanges,
   limitPercent,
   limitResetsAt,
-  parseShortstat,
+  mergeRateLimits,
+  parseNumstat,
   segments,
   shortenPath,
   storedRateLimits,
@@ -48,14 +49,15 @@ const SEPARATOR: string = "\u2003│\u2003"
 // Labels one step smaller than the figures they name
 const LABEL_SIZE: TextProps["size"] = "footnote"
 
-const LEVEL_COLOR: Record<UsageLevel, string> = {
+const LEVEL_COLOR: Record<UsageLevel, TextProps["color"]> = {
   normal: "text",
   warning: "warning",
   danger: "error",
 }
 
-// Runs git in the session's folder; null when git is missing or fails to start
-const runGit = async (
+// Runs git in the session's folder and returns its output untouched, as `-z` lists keep
+// file names with leading or trailing spaces; null when git is missing or fails to start
+const runGitRaw = async (
   $: EngineInterface,
   cwd: string,
   args: readonly string[],
@@ -65,10 +67,25 @@ const runGit = async (
       cwd,
     })
 
-    return result.exitCode === 0 ? result.stdout.trim() : null
+    return result.exitCode === 0 ? result.stdout : null
   } catch {
     return null
   }
+}
+
+// Runs git for a single-line answer (a branch, a commit id, a path), without its newline
+const runGit = async (
+  $: EngineInterface,
+  cwd: string,
+  args: readonly string[],
+): Promise<string | null> => {
+  const output: string | null = await runGitRaw($, cwd, args)
+
+  if (output === null) {
+    return null
+  }
+
+  return output.endsWith("\n") ? output.slice(0, -1) : output
 }
 
 // The current branch, a short commit id when detached, or null outside a repository
@@ -118,7 +135,7 @@ const readUntrackedLines = async (
     "rev-parse",
     "--show-toplevel",
   ])
-  const listed: string | null = await runGit($, cwd, [
+  const listed: string | null = await runGitRaw($, cwd, [
     "ls-files",
     "--others",
     "--exclude-standard",
@@ -172,17 +189,17 @@ const readChanges = async (
     return null
   }
 
-  const shortstat: string | null = await runGit($, cwd, [
+  const numstat: string | null = await runGitRaw($, cwd, [
     "diff",
-    "--shortstat",
+    "--numstat",
     base,
   ])
 
-  if (shortstat === null) {
+  if (numstat === null) {
     return null
   }
 
-  const tracked: LineChanges = parseShortstat(shortstat)
+  const tracked: LineChanges = parseNumstat(numstat)
 
   return {
     added: tracked.added + (await readUntrackedLines($, cwd)),
@@ -193,23 +210,50 @@ const readChanges = async (
 // The store key for the last rate limits any session saw
 const RATE_LIMITS_KEY: string = "rateLimits"
 
-// This session's rate limits, kept for the next session; until this session has a reading
-// of its own (a new conversation before its first response), the last ones kept. Limits
-// belong to the account, and a reset that has passed still reads 0%
-const currentRateLimits = async (
-  $: EngineInterface,
-  fresh: readonly SessionRateLimit[],
-): Promise<readonly SessionRateLimit[]> => {
-  if (fresh.length > 0) {
-    await $.store.set(RATE_LIMITS_KEY, fresh)
-
-    return fresh
-  }
-
-  return storedRateLimits(await $.store.get(RATE_LIMITS_KEY))
+// The rate limits to show, and whether they were kept from an earlier session
+type ShownRateLimits = {
+  rateLimits: readonly SessionRateLimit[]
+  cached: boolean
 }
 
-// Reads the folder, branch and agents, and keeps them with the usage figures given
+// Keeps a new reading for the next session, merged by window so one left out stays kept.
+// Called only when a measurement says the limits moved, so a session holding an older
+// reading never writes it over a newer one
+const saveRateLimits = async (
+  $: EngineInterface,
+  fresh: readonly SessionRateLimit[],
+): Promise<void> => {
+  if (fresh.length === 0) {
+    return
+  }
+
+  const stored: SessionRateLimit[] = storedRateLimits(
+    await $.store.get(RATE_LIMITS_KEY),
+  )
+
+  await $.store.set(RATE_LIMITS_KEY, mergeRateLimits(stored, fresh))
+}
+
+// This session's rate limits; until it has a reading of its own (a new conversation before
+// its first response), the kept ones, marked cached. Kept limits have no account attached,
+// as the engine names none: after an account switch they show until the first response
+const shownRateLimits = async (
+  $: EngineInterface,
+  fresh: readonly SessionRateLimit[],
+): Promise<ShownRateLimits> => {
+  if (fresh.length > 0) {
+    return { rateLimits: fresh, cached: false }
+  }
+
+  const stored: SessionRateLimit[] = storedRateLimits(
+    await $.store.get(RATE_LIMITS_KEY),
+  )
+
+  return { rateLimits: stored, cached: stored.length > 0 }
+}
+
+// Reads the folder, branch and agents, and keeps them with the usage figures given. Rate
+// limits fall back to the kept ones while this session has none
 const refresh = async (
   $: EngineInterface,
   usage: UsageFigures,
@@ -217,7 +261,7 @@ const refresh = async (
   const cwd: string = await $.session.cwd()
   const home: string | undefined = await $.env.get("HOME")
   const agents: AgentInfo[] = await $.agent.list()
-  const rateLimits: readonly SessionRateLimit[] = await currentRateLimits(
+  const { rateLimits, cached }: ShownRateLimits = await shownRateLimits(
     $,
     usage.rateLimits,
   )
@@ -231,6 +275,7 @@ const refresh = async (
     sevenDay: limitPercent(rateLimits, "seven_day"),
     fiveHourResetsAt: limitResetsAt(rateLimits, "five_hour"),
     sevenDayResetsAt: limitResetsAt(rateLimits, "seven_day"),
+    rateLimitsCached: cached,
     agents: activeAgents(agents.map(agent => agent.status)),
   }
 
@@ -248,6 +293,10 @@ export const register: Register = on => {
 
   // After each turn and when a rate-limit window moves
   on("session.measure", async ($, e, next) => {
+    if (e.changed.includes("rateLimits")) {
+      await saveRateLimits($, e.rateLimits)
+    }
+
     await refresh($, e)
 
     return next(e)
@@ -315,7 +364,10 @@ export const register: Register = on => {
               <Text color="inactive" size={LABEL_SIZE}>
                 {segment.label}{" "}
               </Text>
-              <Text color={LEVEL_COLOR[segment.level]} weight="semibold">
+              <Text
+                color={segment.muted ? "inactive" : LEVEL_COLOR[segment.level]}
+                weight="semibold"
+              >
                 {segment.value}
               </Text>
               <Text color="inactive">{segment.unit}</Text>
@@ -325,7 +377,10 @@ export const register: Register = on => {
                     {" "}
                     {segment.reset.label}{" "}
                   </Text>
-                  <Text color="text" weight="semibold">
+                  <Text
+                    color={segment.muted ? "inactive" : "text"}
+                    weight="semibold"
+                  >
                     {segment.reset.value}
                   </Text>
                 </Text>

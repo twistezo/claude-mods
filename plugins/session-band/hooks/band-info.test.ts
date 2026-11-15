@@ -11,7 +11,8 @@ import {
   hasChanges,
   limitPercent,
   limitResetsAt,
-  parseShortstat,
+  mergeRateLimits,
+  parseNumstat,
   segments,
   shortenPath,
   storedRateLimits,
@@ -84,32 +85,30 @@ describe("activeAgents counts agents still at work", () => {
   })
 })
 
-describe("parseShortstat reads git's line counts", () => {
-  test("reads insertions and deletions", () => {
-    expect(
-      parseShortstat(" 3 files changed, 347 insertions(+), 5 deletions(-)"),
-    ).toEqual({ added: 347, removed: 5 })
-  })
-
-  test("reads the singular forms", () => {
-    expect(
-      parseShortstat(" 1 file changed, 1 insertion(+), 1 deletion(-)"),
-    ).toEqual({ added: 1, removed: 1 })
-  })
-
-  test("counts a missing side as zero", () => {
-    expect(parseShortstat(" 2 files changed, 12 insertions(+)")).toEqual({
-      added: 12,
-      removed: 0,
+describe("parseNumstat sums git's line counts", () => {
+  test("sums added and removed lines across files", () => {
+    expect(parseNumstat("340\t5\tsrc/app.ts\n7\t0\tREADME.md\n")).toEqual({
+      added: 347,
+      removed: 5,
     })
-    expect(parseShortstat(" 1 file changed, 4 deletions(-)")).toEqual({
-      added: 0,
+  })
+
+  test("counts a binary file as no lines", () => {
+    expect(parseNumstat("-\t-\tlogo.png\n2\t1\tsrc/app.ts")).toEqual({
+      added: 2,
+      removed: 1,
+    })
+  })
+
+  test("keeps a path with a tab out of the counts", () => {
+    expect(parseNumstat("3\t4\tweird\t9\tname")).toEqual({
+      added: 3,
       removed: 4,
     })
   })
 
   test("reads empty output as no changes", () => {
-    expect(parseShortstat("")).toEqual({ added: 0, removed: 0 })
+    expect(parseNumstat("")).toEqual({ added: 0, removed: 0 })
   })
 })
 
@@ -191,6 +190,7 @@ describe("segments lists the figures with a reading", () => {
     sevenDay: 40,
     fiveHourResetsAt: IN_2H_14M,
     sevenDayResetsAt: SUNDAY_15,
+    rateLimitsCached: false,
     agents: 2,
   }
 
@@ -204,22 +204,51 @@ describe("segments lists the figures with a reading", () => {
     }
 
     expect(segments(band, NOW)).toEqual([
-      { label: "ctx", value: "31", unit: "%", level: "normal", reset: null },
+      {
+        label: "ctx",
+        value: "31",
+        unit: "%",
+        level: "normal",
+        muted: false,
+        reset: null,
+      },
     ])
   })
 
   test("shows every figure in order, with its level, and a reset from above 80%", () => {
     expect(segments(full, NOW)).toEqual([
-      { label: "ctx", value: "64", unit: "%", level: "normal", reset: null },
+      {
+        label: "ctx",
+        value: "64",
+        unit: "%",
+        level: "normal",
+        muted: false,
+        reset: null,
+      },
       {
         label: "5h",
         value: "86",
         unit: "%",
         level: "warning",
+        muted: false,
         reset: { label: "resets in", value: "2h 14m" },
       },
-      { label: "1w", value: "40", unit: "%", level: "normal", reset: null },
-      { label: "agents", value: "2", unit: "", level: "normal", reset: null },
+      {
+        label: "1w",
+        value: "40",
+        unit: "%",
+        level: "normal",
+        muted: false,
+        reset: null,
+      },
+      {
+        label: "agents",
+        value: "2",
+        unit: "",
+        level: "normal",
+        muted: false,
+        reset: null,
+      },
     ])
   })
 
@@ -232,6 +261,7 @@ describe("segments lists the figures with a reading", () => {
         value: "100",
         unit: "%",
         level: "danger",
+        muted: false,
         reset: { label: "resets in", value: "2h 14m" },
       },
       {
@@ -239,6 +269,7 @@ describe("segments lists the figures with a reading", () => {
         value: "103",
         unit: "%",
         level: "danger",
+        muted: false,
         reset: { label: "resets", value: "Sun 15:00" },
       },
     ])
@@ -250,6 +281,7 @@ describe("segments lists the figures with a reading", () => {
       fiveHour: 80,
       sevenDay: 100,
       sevenDayResetsAt: "not a date",
+      rateLimitsCached: false,
     }
 
     expect(segments(band, NOW).map(segment => segment.reset)).toEqual([
@@ -300,23 +332,40 @@ describe("windowPercent empties a window once its reset has passed", () => {
       sevenDay: null,
       fiveHourResetsAt: new Date(NOW - 60_000).toISOString(),
       sevenDayResetsAt: null,
+      rateLimitsCached: false,
       agents: 0,
     }
 
     expect(segments(band, NOW)).toEqual([
-      { label: "5h", value: "0", unit: "%", level: "normal", reset: null },
+      {
+        label: "5h",
+        value: "0",
+        unit: "%",
+        level: "normal",
+        muted: false,
+        reset: null,
+      },
     ])
   })
 })
 
 describe("storedRateLimits reads back the last kept rate limits", () => {
-  test("keeps well-formed entries, with or without a reset time", () => {
+  test("keeps well-formed entries with a reset time", () => {
     const kept: SessionRateLimit[] = [
       { kind: "five_hour", percentUsed: 42, resetsAt: IN_2H_14M },
-      { kind: "seven_day", percentUsed: 30.5 },
+      { kind: "seven_day", percentUsed: 30.5, resetsAt: SUNDAY_15 },
     ]
 
     expect(storedRateLimits(kept)).toEqual(kept)
+  })
+
+  test("drops entries without a usable reset time, as they would never expire", () => {
+    expect(
+      storedRateLimits([
+        { kind: "seven_day", percentUsed: 92 },
+        { kind: "five_hour", percentUsed: 85, resetsAt: "not a date" },
+      ]),
+    ).toEqual([])
   })
 
   test("drops malformed entries", () => {
@@ -327,13 +376,72 @@ describe("storedRateLimits reads back the last kept rate limits", () => {
         { kind: "seven_day", percentUsed: 5, resetsAt: 123 },
         null,
         "five_hour",
-        { kind: "seven_day", percentUsed: 7 },
+        { kind: "seven_day", percentUsed: 7, resetsAt: SUNDAY_15 },
       ]),
-    ).toEqual([{ kind: "seven_day", percentUsed: 7 }])
+    ).toEqual([{ kind: "seven_day", percentUsed: 7, resetsAt: SUNDAY_15 }])
   })
 
   test("reads anything that is not a list as no limits", () => {
     expect(storedRateLimits(undefined)).toEqual([])
     expect(storedRateLimits({ kind: "five_hour" })).toEqual([])
+  })
+})
+
+describe("mergeRateLimits keeps every window a session has seen", () => {
+  const keptFiveHour: SessionRateLimit = {
+    kind: "five_hour",
+    percentUsed: 20,
+    resetsAt: IN_2H_14M,
+  }
+  const keptSevenDay: SessionRateLimit = {
+    kind: "seven_day",
+    percentUsed: 40,
+    resetsAt: SUNDAY_15,
+  }
+
+  test("a fresh window replaces the kept one of the same kind", () => {
+    const fresh: SessionRateLimit = { ...keptFiveHour, percentUsed: 35 }
+
+    expect(mergeRateLimits([keptFiveHour, keptSevenDay], [fresh])).toEqual([
+      fresh,
+      keptSevenDay,
+    ])
+  })
+
+  test("a reading without the weekly window keeps the kept one", () => {
+    expect(mergeRateLimits([keptSevenDay], [keptFiveHour])).toEqual([
+      keptFiveHour,
+      keptSevenDay,
+    ])
+  })
+
+  test("keeps the fresh reading when nothing was kept", () => {
+    expect(mergeRateLimits([], [keptFiveHour])).toEqual([keptFiveHour])
+  })
+})
+
+describe("segments mutes rate limits kept from an earlier session", () => {
+  test("mutes 5h and 1w but not ctx or agents", () => {
+    const band: BandInfo = {
+      path: "~/app",
+      branch: "main",
+      changes: null,
+      context: 10,
+      fiveHour: 86,
+      sevenDay: 40,
+      fiveHourResetsAt: IN_2H_14M,
+      sevenDayResetsAt: SUNDAY_15,
+      rateLimitsCached: true,
+      agents: 1,
+    }
+
+    expect(
+      segments(band, NOW).map(segment => [segment.label, segment.muted]),
+    ).toEqual([
+      ["ctx", false],
+      ["5h", true],
+      ["1w", true],
+      ["agents", false],
+    ])
   })
 })
