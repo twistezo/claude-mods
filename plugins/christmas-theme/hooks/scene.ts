@@ -2,16 +2,22 @@
 // the moon and an A-frame cabin on the right. The snow on the ground and on the boughs rises with
 // the five-hour rate limit. Pure string building: the same view always gives the same picture.
 //
-// Every animation starts at the phase the clock gives it, so a redrawn scene carries on where the
-// last one was instead of starting over. Flakes and twinkles move in a few groups, not one by one,
-// so the app keeps up while it is busy drawing a reply
+// Drawn two ways. Moving, for a surface with no shader: every animation starts at the phase the
+// clock gives it, so a redrawn scene carries on where the last one was, and flakes and twinkles
+// move in a few groups, not one by one. Still, under `snow-shader.ts` on the desktop: no animation
+// and the ground at its lowest, so the Svg never changes and the shader draws the snow on top
 
 export type SceneView = {
-  // Percent of the five-hour rate-limit window in use, 0 to 100
-  percent: number
-  // When the scene is drawn, in seconds: sets each animation's phase
-  seconds: number
+  // How deep the ground snow lies: percent of the five-hour limit, 0 to 100
+  snowPercent: number
+  // How snowy the rest looks (bough snow, haze, the moon, how many flakes fall), 0 to 100
+  dressPercent: number
+  // When the scene is drawn, in seconds, to phase each animation; null draws it still
+  seconds: number | null
 }
+
+// Seconds that phase the animations, or null for a scene with none
+type Clock = number | null
 
 type Point = { x: number; y: number }
 
@@ -30,6 +36,7 @@ const GROUND_EMPTY: number = 790
 const GROUND_RISE_LINEAR: number = 1.565
 const GROUND_RISE_SQUARED: number = 0.00575
 
+// Keep in step with `groundTop` in snow-shader.ts
 const groundTop = (percent: number): number =>
   GROUND_EMPTY -
   percent * GROUND_RISE_LINEAR -
@@ -99,8 +106,12 @@ const loop = (
   attribute: string,
   values: string,
   seconds: number,
-  clock: number,
+  clock: Clock,
 ): string => {
+  if (clock === null) {
+    return ""
+  }
+
   const phase: number = clock % seconds
 
   return `<animate attributeName="${attribute}" values="${values}" dur="${n(seconds)}s" begin="-${n(phase)}s" repeatCount="indefinite"/>`
@@ -110,21 +121,23 @@ const twinkle = (
   seed: number,
   low: number,
   high: number,
-  clock: number,
+  clock: Clock,
 ): string =>
-  loop(
-    "opacity",
-    `${high};${low};${high}`,
-    2.4 + hash(seed) * 2.6,
-    clock + hash(seed + 1) * 10,
-  )
+  clock === null
+    ? ""
+    : loop(
+        "opacity",
+        `${high};${low};${high}`,
+        2.4 + hash(seed) * 2.6,
+        clock + hash(seed + 1) * 10,
+      )
 
 // Splits lights into three groups that each twinkle as one, out of step with each other
 const twinkleGroups = (
   elements: readonly string[],
   seed: number,
   low: number,
-  clock: number,
+  clock: Clock,
 ): string =>
   [0, 1, 2]
     .map(group => {
@@ -148,7 +161,7 @@ const defs = (): string => `<defs>
 <clipPath id="facade"><polygon points="370,500 268,790 472,790"/></clipPath>
 </defs>`
 
-const sky = (percent: number, clock: number): string => {
+const sky = (percent: number, clock: Clock): string => {
   const still: string[] = []
   const twinkling: string[] = []
 
@@ -264,7 +277,7 @@ const TREE_TIERS: readonly Tier[] = [
   { top: 606, bottom: 738, halfWidth: 104 },
 ]
 
-const christmasTree = (percent: number, clock: number): string => {
+const christmasTree = (percent: number, clock: Clock): string => {
   const boughs: string[] = []
   const lights: string[] = []
   const halos: string[] = []
@@ -376,7 +389,7 @@ const snowman =
 <ellipse cx="208" cy="657" rx="14" ry="3" fill="${COLORS.snow}"/>`
 
 const lamp = (
-  clock: number,
+  clock: Clock,
 ): string => `<circle cx="262" cy="628" r="70" fill="url(#warmGlow)" opacity="0.8">${twinkle(950, 0.65, 0.85, clock)}</circle>
 <rect x="259" y="640" width="6" height="150" fill="${COLORS.lampPost}"/>
 <rect x="252" y="642" width="20" height="5" fill="${COLORS.lampPost}"/>
@@ -384,7 +397,39 @@ const lamp = (
 <polygon points="246,604 278,604 262,592" fill="${COLORS.lampPost}"/>
 <ellipse cx="262" cy="592" rx="14" ry="5" fill="${COLORS.snow}"/>`
 
-const leftCorner = (percent: number, clock: number): string => {
+// A snow stake left of the tree, drawn under the ground so the snow buries it. Its marks are the
+// five-hour limit: each sits where `groundTop` puts the snow at that percent, so the snow line
+// reads the limit off the stake. Red and white bands change at each mark
+const POLE_X: number = 4
+const POLE_WIDTH: number = 10
+const POLE_MARKS: readonly number[] = [25, 50, 75, 100]
+// The tip above the 100% mark, so a full limit still shows the stake
+const POLE_TIP: number = 14
+
+const snowPole = (): string => {
+  const top: number = groundTop(100) - POLE_TIP
+  const parts: string[] = [
+    `<rect x="${POLE_X}" y="${n(top)}" width="${POLE_WIDTH}" height="${n(GROUND_EMPTY - top)}" rx="2" fill="#f4f1ea"/>`,
+  ]
+  let from: number = 0
+
+  POLE_MARKS.forEach((mark, index) => {
+    if (index % 2 === 1) {
+      parts.push(
+        `<rect x="${POLE_X}" y="${n(groundTop(mark))}" width="${POLE_WIDTH}" height="${n(groundTop(from) - groundTop(mark))}" fill="${COLORS.hat}"/>`,
+      )
+    }
+
+    parts.push(
+      `<text x="${POLE_X + POLE_WIDTH + 4}" y="${n(groundTop(mark) + 3)}" font-size="9" font-weight="600" font-family="system-ui, sans-serif" fill="${COLORS.snow}" stroke="#0b1230" stroke-width="2.5" stroke-opacity="0.5" paint-order="stroke">${mark}%</text>`,
+    )
+    from = mark
+  })
+
+  return parts.join("")
+}
+
+const leftCorner = (percent: number, clock: Clock): string => {
   const snowRadius: number = 9 + percent * 0.12
 
   return `<svg x="0" y="0" width="100%" height="100%" viewBox="0 0 ${LEFT_WIDTH} ${HEIGHT}" preserveAspectRatio="xMinYMid meet" overflow="visible">
@@ -404,6 +449,7 @@ ${christmasTree(percent, clock)}
 ${gifts()}
 ${snowman()}
 ${lamp(clock)}
+${snowPole()}
 </svg>`
 }
 
@@ -420,7 +466,7 @@ const moon = (percent: number): string => {
 
 const CABIN_APEX: Point = { x: 370, y: 470 }
 
-const stringLights = (clock: number): string => {
+const stringLights = (clock: Clock): string => {
   const halos: string[] = []
   const bulbs: string[] = []
   const count: number = 14
@@ -445,10 +491,18 @@ const stringLights = (clock: number): string => {
 
 const SMOKE_SECONDS: number = 7.5
 
-const smoke = (clock: number): string => {
+const smoke = (clock: Clock): string => {
   const puffs: string[] = []
 
   for (let index = 0; index < 3; index++) {
+    if (clock === null) {
+      // Still smoke: three puffs rising and fading, where the moving ones pass
+      puffs.push(
+        `<circle cx="442" cy="${528 - index * 36}" r="${10 + index * 5}" fill="#c9cfe6" opacity="${n(0.35 - index * 0.1)}"/>`,
+      )
+      continue
+    }
+
     const puffClock: number = clock + (index * SMOKE_SECONDS) / 3
 
     puffs.push(
@@ -459,7 +513,7 @@ const smoke = (clock: number): string => {
   return puffs.join("")
 }
 
-const cabin = (percent: number, clock: number): string => {
+const cabin = (percent: number, clock: Clock): string => {
   const roofSnow: number = 12 + percent * 0.14
   const planks: string[] = []
 
@@ -515,7 +569,7 @@ ${lantern(338)}${lantern(402)}
 ${stringLights(clock)}`
 }
 
-const rightCorner = (percent: number, clock: number): string => {
+const rightCorner = (percent: number, clock: Clock): string => {
   const snowRadius: number = 9 + percent * 0.12
 
   return `<svg x="0" y="0" width="100%" height="100%" viewBox="0 0 ${RIGHT_WIDTH} ${HEIGHT}" preserveAspectRatio="xMaxYMid meet" overflow="visible">
@@ -536,14 +590,28 @@ ${cabin(percent, clock)}
 </svg>`
 }
 
-// One drift across the whole width, its crest waving around `top`
-const drift = (top: number, seed: number, fill: string): string => {
-  const step: number = 160
-  let path: string = `M0 ${HEIGHT} L0 ${n(top)}`
-  let previous: Point = { x: 0, y: top }
+// Each drift's crest, above or below `top`, at x = 320, 480 ... 1600; it lies flat at `top` from
+// 0 to 160, so at the snow stake by the left edge the snow line is exactly the limit's level.
+// Keep in step with `DRIFTS` in snow-shader.ts, which draws the same crests
+const DRIFT_OFFSETS: readonly (readonly number[])[] = [
+  [0.2, -13.5, -9.3, 2.9, 7.5, -10, -8.9, -2.4, 5.4],
+  [-1.9, 12.4, 1.8, -13.9, 5.2, -12.2, 2.7, 10.4, 10.9],
+  [-11.3, 12.1, -0.4, -12.7, 1.1, 9.9, 0.3, -11.4, -0.4],
+]
 
-  for (let x = step; x <= WIDTH; x += step) {
-    const next: Point = { x, y: top + (hash(seed + x) - 0.5) * 28 }
+// One drift across the whole width; each segment after the first is a curve whose control point
+// sits midway across and 10 above the lower of its ends
+const drift = (
+  top: number,
+  offsets: readonly number[],
+  fill: string,
+): string => {
+  const step: number = 160
+  let path: string = `M0 ${HEIGHT} L0 ${n(top)} L${step} ${n(top)}`
+  let previous: Point = { x: step, y: top }
+
+  for (let x = step * 2; x <= WIDTH; x += step) {
+    const next: Point = { x, y: top + (offsets[x / step - 2] ?? 0) }
 
     path += ` Q${n(previous.x + step / 2)} ${n(Math.min(previous.y, next.y) - 10)} ${n(next.x)} ${n(next.y)}`
     previous = next
@@ -553,7 +621,7 @@ const drift = (top: number, seed: number, fill: string): string => {
 }
 
 // The ground: its frame stretches to the window, so the snow keeps its height beside the corners
-const ground = (percent: number, clock: number): string => {
+const ground = (percent: number, clock: Clock): string => {
   const top: number = groundTop(percent)
   const sparkles: string[] = []
 
@@ -567,9 +635,9 @@ const ground = (percent: number, clock: number): string => {
   }
 
   return `<svg x="0" y="0" width="100%" height="100%" viewBox="0 0 ${WIDTH} ${HEIGHT}" preserveAspectRatio="none">
-${drift(top, 1, "url(#ground)")}
-${drift(top + 60, 2, "#dde3f5")}
-${drift(top + 115, 3, "#eef2fc")}
+${drift(top, DRIFT_OFFSETS[0] ?? [], "url(#ground)")}
+${drift(top + 60, DRIFT_OFFSETS[1] ?? [], "#dde3f5")}
+${drift(top + 115, DRIFT_OFFSETS[2] ?? [], "#eef2fc")}
 ${twinkleGroups(sparkles, 700, 0, clock)}
 </svg>`
 }
@@ -618,7 +686,11 @@ const SNOW_LAYERS: readonly SnowLayer[] = [
 // Falling flakes over everything: more of them as the limit fills. Each layer moves as one: its
 // flakes are drawn twice, a screen apart, and the layer slides down one screen and starts over,
 // so the fall never seams. With motion turned off the flakes rest where they are drawn
-const snowfall = (percent: number, clock: number): string => {
+const snowfall = (percent: number, clock: Clock): string => {
+  if (clock === null) {
+    return ""
+  }
+
   const count: number = 40 + Math.round(percent * 1.4)
 
   return SNOW_LAYERS.map((layer, layerIndex) => {
@@ -646,8 +718,8 @@ const snowfall = (percent: number, clock: number): string => {
 }
 
 export const sceneSvg = (view: SceneView): string => {
-  const percent: number = clampPercent(view.percent)
-  const clock: number = view.seconds
+  const dress: number = clampPercent(view.dressPercent)
+  const clock: Clock = view.seconds
 
   // The root has no viewBox, so each layer gets the whole screen: the sky and the flakes crop to
   // fill it, the corners keep their shape at the sides, and the ground stretches between them
@@ -655,10 +727,10 @@ export const sceneSvg = (view: SceneView): string => {
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
 ${defs()}
-<svg ${fill}>${sky(percent, clock)}</svg>
-${leftCorner(percent, clock)}
-${rightCorner(percent, clock)}
-${ground(percent, clock)}
-<svg ${fill}>${snowfall(percent, clock)}</svg>
+<svg ${fill}>${sky(dress, clock)}</svg>
+${leftCorner(dress, clock)}
+${rightCorner(dress, clock)}
+${ground(clampPercent(view.snowPercent), clock)}
+<svg ${fill}>${snowfall(dress, clock)}</svg>
 </svg>`
 }

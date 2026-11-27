@@ -35,9 +35,18 @@ const THEME: Theme = createTheme({
   dark: winterNight,
   backdrop: {
     scene: SCENE_NAME,
-    // Light glass: the tree and the cabin stay clear beside the conversation
-    glass: { blur: 24, tint: winterNight.background, opacity: 0.55 },
+    // The app's own glass strength, tinted navy: the tree and the cabin stay clear beside the conversation
+    glass: { blur: 16, tint: winterNight.background, opacity: 0.6 },
   },
+})
+
+// The desktop's scene under the shader: no animation, the ground at its lowest, and the boughs, sky
+// and moon as at a limit a third used. Built once, so it never changes while the mod is loaded
+const STILL_DRESS_PERCENT: number = 35
+const STILL_SCENE: string = sceneSvg({
+  snowPercent: 0,
+  dressPercent: STILL_DRESS_PERCENT,
+  seconds: null,
 })
 
 // The scene is a night, so the look asks for dark mode
@@ -128,15 +137,32 @@ export const register: Register = on => {
       return next(e)
     }
 
-    const { Svg } = $.ui.resolve(e)
+    const { Svg, Shader } = $.ui.resolve(e)
     const state: SnowState = await read($, snow)
-    // A state stored before `changedAt` existed starts the animations from 0
+    const alt: string = `A snowy Christmas night; the five-hour limit is ${state.percent}% used`
+
+    // The desktop: the still Svg never changes, so it never reloads; the shader draws the snow at
+    // the limit's level and eases it there. Reduce Motion or a failed shader shows the still alone
+    if (e.surface === "desktop" && Shader !== undefined) {
+      return (
+        <Shader module="./snow-shader.ts" values={{ level: state.percent }}>
+          <Svg source={STILL_SCENE} alt={alt} isInteractive />
+        </Shader>
+      )
+    }
+
+    // The phone, or an app with no shaders: the moving Svg, drawn anew at each change of the
+    // limit. A state stored before `changedAt` existed starts the animations from 0
     const seconds: number = (state.changedAt || 0) / 1000
 
     return (
       <Svg
-        source={sceneSvg({ percent: state.percent, seconds })}
-        alt={`A snowy Christmas night; the five-hour limit is ${state.percent}% used`}
+        source={sceneSvg({
+          snowPercent: state.percent,
+          dressPercent: state.percent,
+          seconds,
+        })}
+        alt={alt}
         isInteractive
       />
     )
