@@ -2,11 +2,11 @@
 
 Mods for the Claude desktop app.
 
-| Theme                                                | Dark                                      | Light   |
-| ---------------------------------------------------- | ----------------------------------------- | ------- |
-| [`dracula-theme`](plugins/dracula-theme)             | Dracula                                   | Alucard |
-| [`dracula-scene-theme`](plugins/dracula-scene-theme) | Dracula + animated scene                  | none    |
-| [`christmas-theme`](plugins/christmas-theme)         | Snowy night; snow rises with the 5h limit | none    |
+| Theme                                                | Dark                                      | Light   | Animated                         | Screenshot                                                                                                                                                                                                      |
+| ---------------------------------------------------- | ----------------------------------------- | ------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`dracula-theme`](plugins/dracula-theme)             | Dracula                                   | Alucard | no                               | <a href="docs/screenshots/dracula-theme.webp" target="_blank"><img src="docs/screenshots/dracula-theme.webp" height="130" alt="dracula-theme: Dracula colors in dark mode"></a>                                 |
+| [`dracula-scene-theme`](plugins/dracula-scene-theme) | Dracula + scene                           | none    | yes: drifting glows              | <a href="docs/screenshots/dracula-scene-theme.webp" target="_blank"><img src="docs/screenshots/dracula-scene-theme.webp" height="130" alt="dracula-scene-theme: Dracula colors over purple and pink glows"></a> |
+| [`christmas-theme`](plugins/christmas-theme)         | Snowy night; snow rises with the 5h limit | none    | yes: falling snow, rising drifts | <a href="docs/screenshots/christmas-theme.webp" target="_blank"><img src="docs/screenshots/christmas-theme.webp" height="130" alt="christmas-theme: a snowy night with a tree, a snow stake and a cabin"></a>   |
 
 | Mod                                    | What it shows above the prompt                                       |
 | -------------------------------------- | -------------------------------------------------------------------- |
