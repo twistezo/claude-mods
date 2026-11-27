@@ -1,54 +1,39 @@
-// What the scene shows of the session: how full the context is and how long the prompt cache lasts
+// How deep the snow lies: how much of the five-hour rate-limit window is used
 
-import type { TurnUsage } from "claude-code"
+import type { SessionRateLimit } from "claude-code"
 
-const MINUTE_MS: number = 60_000
-const FIVE_MINUTES_MS: number = 5 * MINUTE_MS
-const ONE_HOUR_MS: number = 60 * MINUTE_MS
+const FIVE_HOUR_KIND: string = "five_hour"
 
-// The context fill as a whole percent from 0 to 100; 0 before the first reading
-export const contextPercent = (percent: number | undefined): number =>
-  percent === undefined ? 0 : Math.min(100, Math.max(0, Math.round(percent)))
+// The five-hour window as the last API response reported it, or undefined without a reading
+const fiveHourLimit = (
+  rateLimits: readonly SessionRateLimit[],
+): SessionRateLimit | undefined =>
+  rateLimits.find(limit => limit.kind === FIVE_HOUR_KIND)
 
-// The cache lifetime a response gives: the one it wrote for (the shorter when it wrote both,
-// as the engine's own `cacheTtl` counts it), the last write's when it only read,
-// or null when it neither wrote nor read
-export const cacheTtlMs = (
-  usage: TurnUsage | null,
-  previousTtlMs: number | null,
+// When the five-hour window resets, in milliseconds, or null when unknown
+export const limitResetsAt = (
+  rateLimits: readonly SessionRateLimit[],
 ): number | null => {
-  if (usage === null) {
-    return null
-  }
+  const resetsAt: string | undefined = fiveHourLimit(rateLimits)?.resetsAt
+  const at: number = resetsAt === undefined ? Number.NaN : Date.parse(resetsAt)
 
-  if ((usage.ephemeral_5m_input_tokens ?? 0) > 0) {
-    return FIVE_MINUTES_MS
-  }
-
-  if ((usage.ephemeral_1h_input_tokens ?? 0) > 0) {
-    return ONE_HOUR_MS
-  }
-
-  if (usage.cache_creation_input_tokens > 0) {
-    // A write with no lifetime reported: the API's default
-    return FIVE_MINUTES_MS
-  }
-
-  if (usage.cache_read_input_tokens > 0) {
-    return previousTtlMs ?? FIVE_MINUTES_MS
-  }
-
-  return null
+  return Number.isNaN(at) ? null : at
 }
 
-// Whole minutes left, rounded up so a fresh one-hour cache reads 60m; null once it has lapsed
-export const cacheMinutesLeft = (
-  expiresAt: number | null,
+// The window's use as a whole percent from 0 to 100, or null without a reading
+export const limitPercent = (
+  rateLimits: readonly SessionRateLimit[],
+): number | null => {
+  const used: number | undefined = fiveHourLimit(rateLimits)?.percentUsed
+
+  return used === undefined
+    ? null
+    : Math.min(100, Math.max(0, Math.round(used)))
+}
+
+// The snow melts away once the window has reset, until the next response reports it again
+export const snowPercent = (
+  percent: number,
+  resetsAt: number | null,
   now: number,
-): number | null => {
-  if (expiresAt === null || expiresAt <= now) {
-    return null
-  }
-
-  return Math.ceil((expiresAt - now) / MINUTE_MS)
-}
+): number => (resetsAt !== null && resetsAt <= now ? 0 : percent)

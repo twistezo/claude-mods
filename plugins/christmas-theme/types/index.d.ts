@@ -1,14 +1,12 @@
 // What the scene draws from, kept in the session's state so a redraw reads the latest figures
 export type SnowState = {
-  // Percent of the context window in use, 0 to 100
+  // Percent of the five-hour rate-limit window in use, 0 to 100
   percent: number
-  // When the prompt cache the main thread last wrote or read lapses, in `$.clock.now()`
-  // milliseconds, or null when there is none (a new session, or just after a compaction)
-  cacheExpiresAt: number | null
-  // The lifetime the last cache write was given, kept for a later request that only reads
-  cacheTtlMs: number | null
-  // Whole minutes left on the cache, rounded up, or null when it has lapsed or there is none
-  cacheMinutes: number | null
+  // When that window resets, in milliseconds, or null when unknown
+  resetsAt: number | null
+  // When the figures last changed, in `$.clock.now()` milliseconds: the scene's animations take
+  // their phase from it, so a redraw carries on where the last one was
+  changedAt: number
 }
 
 declare module "claude-code" {

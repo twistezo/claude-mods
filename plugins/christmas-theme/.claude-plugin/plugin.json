@@ -1,7 +1,7 @@
 {
   "name": "christmas-theme",
-  "version": "0.1.0",
-  "description": "A snowy Christmas night: the snow piles up as the context fills, and a candle burns down with the prompt cache, for dark mode in the Claude desktop app",
+  "version": "0.2.0",
+  "description": "A snowy Christmas night whose snow piles up as the five-hour rate limit fills, for dark mode in the Claude desktop app",
   "author": {
     "name": "twistezo"
   },

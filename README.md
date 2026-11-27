@@ -2,11 +2,11 @@
 
 Mods for the Claude desktop app.
 
-| Theme                                                | Dark                                                    | Light   |
-| ---------------------------------------------------- | ------------------------------------------------------- | ------- |
-| [`dracula-theme`](plugins/dracula-theme)             | Dracula                                                 | Alucard |
-| [`dracula-scene-theme`](plugins/dracula-scene-theme) | Dracula + animated scene                                | none    |
-| [`christmas-theme`](plugins/christmas-theme)         | Snowy night; snow rises with context, candle with cache | none    |
+| Theme                                                | Dark                                      | Light   |
+| ---------------------------------------------------- | ----------------------------------------- | ------- |
+| [`dracula-theme`](plugins/dracula-theme)             | Dracula                                   | Alucard |
+| [`dracula-scene-theme`](plugins/dracula-scene-theme) | Dracula + animated scene                  | none    |
+| [`christmas-theme`](plugins/christmas-theme)         | Snowy night; snow rises with the 5h limit | none    |
 
 | Mod                                    | What it shows above the prompt                                       |
 | -------------------------------------- | -------------------------------------------------------------------- |
@@ -27,4 +27,4 @@ claude plugin marketplace update claude-mods && claude plugin update <mod>@claud
 
 - [MIT](LICENSE)
 - Colors: [Dracula Theme](https://draculatheme.com).
-- `christmas-theme`: recreated from Lydia Hallie's [snow-as-context demo](https://x.com/lydiahallie/status/2122028598639136810).
+- `christmas-theme`: based on Lydia Hallie's [snow-as-context demo](https://x.com/lydiahallie/status/2122028598639136810).

@@ -1,13 +1,16 @@
-// The Christmas Eve backdrop as one SVG string: a hanging sign with a robin, a decorated tree,
-// a snowman and a lamp on the left, the moon and an A-frame cabin on the right.
-// The snow on the ground and on the boughs rises with the context fill; the candle on the sign
-// burns down with the prompt cache. Pure string building: the same view always gives the same picture
+// The Christmas Eve backdrop as one SVG string: a decorated tree, a snowman and a lamp on the left,
+// the moon and an A-frame cabin on the right. The snow on the ground and on the boughs rises with
+// the five-hour rate limit. Pure string building: the same view always gives the same picture.
+//
+// Every animation starts at the phase the clock gives it, so a redrawn scene carries on where the
+// last one was instead of starting over. Flakes and twinkles move in a few groups, not one by one,
+// so the app keeps up while it is busy drawing a reply
 
 export type SceneView = {
-  // Percent of the context window in use, 0 to 100
+  // Percent of the five-hour rate-limit window in use, 0 to 100
   percent: number
-  // Whole minutes left on the prompt cache, or null when there is none
-  cacheMinutes: number | null
+  // When the scene is drawn, in seconds: sets each animation's phase
+  seconds: number
 }
 
 type Point = { x: number; y: number }
@@ -21,8 +24,8 @@ const HEIGHT: number = 900
 const LEFT_WIDTH: number = 420
 const RIGHT_WIDTH: number = 520
 
-// Where the snow on the ground lies: low at an empty context, over the cabin's door at a full one.
-// It piles up slowly at first and faster as the context runs out
+// Where the snow on the ground lies: low at an unused limit, over the cabin's door at a full one.
+// It piles up slowly at first and faster as the limit runs out
 const GROUND_EMPTY: number = 790
 const GROUND_RISE_LINEAR: number = 1.565
 const GROUND_RISE_SQUARED: number = 0.00575
@@ -31,11 +34,6 @@ const groundTop = (percent: number): number =>
   GROUND_EMPTY -
   percent * GROUND_RISE_LINEAR -
   percent * percent * GROUND_RISE_SQUARED
-
-// The longest cache the sign shows a full candle for
-const CANDLE_FULL_MINUTES: number = 60
-
-const FONT: string = "ui-rounded, 'SF Pro Rounded', system-ui, sans-serif"
 
 const COLORS = {
   snow: "#f1f4fd",
@@ -62,13 +60,6 @@ const COLORS = {
   brick: "#686a80",
   moon: "#f3ebc7",
   crater: "#e2d7a8",
-  boardText: "#f6ead0",
-  rope: "#b08a5a",
-  robinBody: "#74502f",
-  robinWing: "#5c3d22",
-  robinBreast: "#e2602a",
-  robinBelly: "#f1e4cf",
-  beak: "#f0a030",
   hat: "#d6312e",
   snowmanHat: "#1d1d24",
   scarf: "#c8312b",
@@ -103,11 +94,47 @@ const clampPercent = (percent: number): number =>
 const points = (list: readonly Point[]): string =>
   list.map(point => `${n(point.x)},${n(point.y)}`).join(" ")
 
-const twinkle = (seed: number, low: number, high: number): string => {
-  const seconds: number = 2.4 + hash(seed) * 2.6
+// An endless animation, begun as far into its loop as the clock says
+const loop = (
+  attribute: string,
+  values: string,
+  seconds: number,
+  clock: number,
+): string => {
+  const phase: number = clock % seconds
 
-  return `<animate attributeName="opacity" values="${high};${low};${high}" dur="${n(seconds)}s" begin="-${n(hash(seed + 1) * seconds)}s" repeatCount="indefinite"/>`
+  return `<animate attributeName="${attribute}" values="${values}" dur="${n(seconds)}s" begin="-${n(phase)}s" repeatCount="indefinite"/>`
 }
+
+const twinkle = (
+  seed: number,
+  low: number,
+  high: number,
+  clock: number,
+): string =>
+  loop(
+    "opacity",
+    `${high};${low};${high}`,
+    2.4 + hash(seed) * 2.6,
+    clock + hash(seed + 1) * 10,
+  )
+
+// Splits lights into three groups that each twinkle as one, out of step with each other
+const twinkleGroups = (
+  elements: readonly string[],
+  seed: number,
+  low: number,
+  clock: number,
+): string =>
+  [0, 1, 2]
+    .map(group => {
+      const members: string = elements
+        .filter((_, index) => index % 3 === group)
+        .join("")
+
+      return `<g>${twinkle(seed + group * 7, low, 1, clock)}${members}</g>`
+    })
+    .join("")
 
 const defs = (): string => `<defs>
 <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
@@ -118,31 +145,33 @@ const defs = (): string => `<defs>
 <radialGradient id="warmGlow"><stop offset="0" stop-color="#ffd27a" stop-opacity="0.65"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient>
 <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3f6ff"/><stop offset="1" stop-color="#c3cce9"/></linearGradient>
 <linearGradient id="windowLight" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffeab0"/><stop offset="1" stop-color="#f2b450"/></linearGradient>
-<linearGradient id="board" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a4c28"/><stop offset="1" stop-color="#5e391c"/></linearGradient>
 <clipPath id="facade"><polygon points="370,500 268,790 472,790"/></clipPath>
 </defs>`
 
-const sky = (percent: number): string => {
-  const stars: string[] = []
+const sky = (percent: number, clock: number): string => {
+  const still: string[] = []
+  const twinkling: string[] = []
 
   for (let index = 0; index < 60; index++) {
     const x: number = hash(index * 3) * WIDTH
     const y: number = hash(index * 3 + 1) * 520
     const radius: number = 0.8 + hash(index * 3 + 2) * 1.6
-    const animation: string = index % 3 === 0 ? twinkle(index, 0.2, 0.9) : ""
+    const star: string = `<circle cx="${n(x)}" cy="${n(y)}" r="${n(radius)}" fill="#ffffff" opacity="0.75"/>`
 
-    stars.push(
-      `<circle cx="${n(x)}" cy="${n(y)}" r="${n(radius)}" fill="#ffffff" opacity="0.75">${animation}</circle>`,
-    )
+    if (index % 3 === 0) {
+      twinkling.push(star)
+    } else {
+      still.push(star)
+    }
   }
 
-  // A full context washes the sky out, as a snowstorm does
+  // A spent limit washes the sky out, as a snowstorm does
   const haze: number = percent * 0.0024
 
   return `<rect width="${WIDTH}" height="${HEIGHT}" fill="url(#sky)"/>
-<ellipse cx="760" cy="260" rx="240" ry="430" transform="rotate(-22 760 260)" fill="url(#aurora)"><animate attributeName="opacity" values="0.6;1;0.6" dur="14s" repeatCount="indefinite"/></ellipse>
-<ellipse cx="1180" cy="330" rx="200" ry="380" transform="rotate(18 1180 330)" fill="url(#aurora)"><animate attributeName="opacity" values="1;0.55;1" dur="17s" repeatCount="indefinite"/></ellipse>
-${stars.join("")}
+<ellipse cx="760" cy="260" rx="240" ry="430" transform="rotate(-22 760 260)" fill="url(#aurora)">${loop("opacity", "0.6;1;0.6", 14, clock)}</ellipse>
+<ellipse cx="1180" cy="330" rx="200" ry="380" transform="rotate(18 1180 330)" fill="url(#aurora)">${loop("opacity", "1;0.55;1", 17, clock)}</ellipse>
+${still.join("")}${twinkleGroups(twinkling, 10, 0.25, clock)}
 <rect width="${WIDTH}" height="${HEIGHT}" fill="#c8cff0" opacity="${haze.toFixed(3)}"/>`
 }
 
@@ -178,7 +207,7 @@ const snowClump = (x: number, y: number, radius: number): string => {
   return `<path d="${shade}" fill="${COLORS.snowShade}"/><path d="${clump}" fill="${COLORS.snow}"/>`
 }
 
-// A pine in the far trees, its boughs dusted with snow that grows with the context
+// A pine in the far trees, its boughs dusted with snow that grows with the limit
 const pine = (
   x: number,
   base: number,
@@ -235,9 +264,10 @@ const TREE_TIERS: readonly Tier[] = [
   { top: 606, bottom: 738, halfWidth: 104 },
 ]
 
-const christmasTree = (percent: number): string => {
+const christmasTree = (percent: number, clock: number): string => {
   const boughs: string[] = []
   const lights: string[] = []
+  const halos: string[] = []
   const caps: string[] = []
   const capRadius: number = 10 + percent * 0.15
 
@@ -263,8 +293,6 @@ const christmasTree = (percent: number): string => {
       const x: number = from.x + (to.x - from.x) * t
       const y: number =
         from.y + (to.y - from.y) * t + Math.sin(t * Math.PI) * 10
-      const seed: number = tierIndex * 40 + index
-
       if (index % 2 === 1) {
         lights.push(
           `<circle cx="${n(x)}" cy="${n(y)}" r="1.8" fill="${COLORS.warm}"/>`,
@@ -275,9 +303,10 @@ const christmasTree = (percent: number): string => {
       const color: string =
         BULB_COLORS[(tierIndex + index / 2) % BULB_COLORS.length] ?? COLORS.warm
 
-      lights.push(
-        `<circle cx="${n(x)}" cy="${n(y)}" r="9" fill="${color}" opacity="0.35">${twinkle(seed, 0.12, 0.45)}</circle><circle cx="${n(x)}" cy="${n(y)}" r="4.5" fill="${color}"/>`,
+      halos.push(
+        `<circle cx="${n(x)}" cy="${n(y)}" r="9" fill="${color}" opacity="0.45"/>`,
       )
+      lights.push(`<circle cx="${n(x)}" cy="${n(y)}" r="4.5" fill="${color}"/>`)
     }
 
     // A few baubles hanging under the garland
@@ -320,9 +349,9 @@ const christmasTree = (percent: number): string => {
 
   return `<rect x="${TREE_X - 11}" y="730" width="22" height="60" fill="${COLORS.trunk}"/>
 ${boughs.join("")}
-<g opacity="${lightsOpacity.toFixed(2)}">${lights.join("")}</g>
+<g opacity="${lightsOpacity.toFixed(2)}">${twinkleGroups(halos, 40, 0.25, clock)}${lights.join("")}</g>
 ${caps.join("")}
-<circle cx="${TREE_X}" cy="316" r="38" fill="url(#warmGlow)">${twinkle(900, 0.6, 1)}</circle>
+<circle cx="${TREE_X}" cy="316" r="38" fill="url(#warmGlow)">${twinkle(900, 0.6, 1, clock)}</circle>
 <polygon points="${points(star)}" fill="${COLORS.star}"/>`
 }
 
@@ -346,15 +375,16 @@ const snowman =
 <rect x="194" y="678" width="28" height="6" fill="${COLORS.hat}"/>
 <ellipse cx="208" cy="657" rx="14" ry="3" fill="${COLORS.snow}"/>`
 
-const lamp =
-  (): string => `<circle cx="262" cy="628" r="70" fill="url(#warmGlow)" opacity="0.8">${twinkle(950, 0.65, 0.85)}</circle>
+const lamp = (
+  clock: number,
+): string => `<circle cx="262" cy="628" r="70" fill="url(#warmGlow)" opacity="0.8">${twinkle(950, 0.65, 0.85, clock)}</circle>
 <rect x="259" y="640" width="6" height="150" fill="${COLORS.lampPost}"/>
 <rect x="252" y="642" width="20" height="5" fill="${COLORS.lampPost}"/>
 <polygon points="250,604 274,604 270,640 254,640" fill="${COLORS.warm}" stroke="${COLORS.lampPost}" stroke-width="3"/>
 <polygon points="246,604 278,604 262,592" fill="${COLORS.lampPost}"/>
 <ellipse cx="262" cy="592" rx="14" ry="5" fill="${COLORS.snow}"/>`
 
-const leftCorner = (percent: number): string => {
+const leftCorner = (percent: number, clock: number): string => {
   const snowRadius: number = 9 + percent * 0.12
 
   return `<svg x="0" y="0" width="100%" height="100%" viewBox="0 0 ${LEFT_WIDTH} ${HEIGHT}" preserveAspectRatio="xMinYMid meet" overflow="visible">
@@ -370,10 +400,10 @@ ${mountains(
   LEFT_WIDTH,
 )}
 ${pine(18, 790, 280, 70, snowRadius)}${pine(320, 790, 230, 58, snowRadius)}${pine(400, 790, 300, 70, snowRadius)}
-${christmasTree(percent)}
+${christmasTree(percent, clock)}
 ${gifts()}
 ${snowman()}
-${lamp()}
+${lamp(clock)}
 </svg>`
 }
 
@@ -390,7 +420,8 @@ const moon = (percent: number): string => {
 
 const CABIN_APEX: Point = { x: 370, y: 470 }
 
-const stringLights = (): string => {
+const stringLights = (clock: number): string => {
+  const halos: string[] = []
   const bulbs: string[] = []
   const count: number = 14
 
@@ -399,34 +430,36 @@ const stringLights = (): string => {
       const t: number = index / (count + 1)
       const x: number = CABIN_APEX.x + side * 124 * t
       const y: number = CABIN_APEX.y + 315 * t
-      const seed: number = (side + 2) * 100 + index
 
+      halos.push(
+        `<circle cx="${n(x)}" cy="${n(y)}" r="5.5" fill="${COLORS.warm}" opacity="0.5"/>`,
+      )
       bulbs.push(
-        `<circle cx="${n(x)}" cy="${n(y)}" r="5.5" fill="${COLORS.warm}" opacity="0.4">${twinkle(seed, 0.15, 0.5)}</circle><circle cx="${n(x)}" cy="${n(y)}" r="2.6" fill="${COLORS.warm}"/>`,
+        `<circle cx="${n(x)}" cy="${n(y)}" r="2.6" fill="${COLORS.warm}"/>`,
       )
     }
   }
 
-  return bulbs.join("")
+  return `${twinkleGroups(halos, 200, 0.3, clock)}${bulbs.join("")}`
 }
 
-const smoke = (): string => {
+const SMOKE_SECONDS: number = 7.5
+
+const smoke = (clock: number): string => {
   const puffs: string[] = []
 
   for (let index = 0; index < 3; index++) {
+    const puffClock: number = clock + (index * SMOKE_SECONDS) / 3
+
     puffs.push(
-      `<circle cx="442" cy="548" r="8" fill="#c9cfe6" opacity="0">
-<animate attributeName="cy" values="548;420" dur="7.5s" begin="-${index * 2.5}s" repeatCount="indefinite"/>
-<animate attributeName="r" values="8;22" dur="7.5s" begin="-${index * 2.5}s" repeatCount="indefinite"/>
-<animate attributeName="opacity" values="0.45;0" dur="7.5s" begin="-${index * 2.5}s" repeatCount="indefinite"/>
-</circle>`,
+      `<circle cx="442" cy="548" r="8" fill="#c9cfe6" opacity="0">${loop("cy", "548;420", SMOKE_SECONDS, puffClock)}${loop("r", "8;22", SMOKE_SECONDS, puffClock)}${loop("opacity", "0.45;0", SMOKE_SECONDS, puffClock)}</circle>`,
     )
   }
 
   return puffs.join("")
 }
 
-const cabin = (percent: number): string => {
+const cabin = (percent: number, clock: number): string => {
   const roofSnow: number = 12 + percent * 0.14
   const planks: string[] = []
 
@@ -457,7 +490,7 @@ const cabin = (percent: number): string => {
   return `<rect x="425" y="560" width="34" height="170" fill="${COLORS.chimney}"/>
 <path d="M425 580 H459 M425 600 H459 M425 620 H459 M425 640 H459 M442 560 V580 M434 580 V600 M450 600 V620 M436 620 V640" stroke="${COLORS.brick}" stroke-width="2"/>
 <rect x="420" y="552" width="44" height="12" rx="5" fill="${COLORS.snow}"/>
-${smoke()}
+${smoke(clock)}
 <polygon points="370,${n(CABIN_APEX.y - 8)} 238,790 502,790" fill="${COLORS.snow}" stroke="${COLORS.snow}" stroke-width="${n(roofSnow)}" stroke-linejoin="round"/>
 <polygon points="370,478 252,790 488,790" fill="${COLORS.woodBeam}"/>
 <polygon points="370,500 268,790 472,790" fill="${COLORS.wood}"/>
@@ -479,10 +512,10 @@ ${lowerWindow(288)}${lowerWindow(410)}
 <path d="M370 736 L363 744 M370 736 L377 744" stroke="${COLORS.ornamentRed}" stroke-width="3"/>
 <circle cx="385" cy="750" r="2.5" fill="${COLORS.ornamentGold}"/>
 ${lantern(338)}${lantern(402)}
-${stringLights()}`
+${stringLights(clock)}`
 }
 
-const rightCorner = (percent: number): string => {
+const rightCorner = (percent: number, clock: number): string => {
   const snowRadius: number = 9 + percent * 0.12
 
   return `<svg x="0" y="0" width="100%" height="100%" viewBox="0 0 ${RIGHT_WIDTH} ${HEIGHT}" preserveAspectRatio="xMaxYMid meet" overflow="visible">
@@ -499,7 +532,7 @@ ${mountains(
   RIGHT_WIDTH,
 )}
 ${pine(70, 790, 260, 64, snowRadius)}${pine(160, 790, 200, 52, snowRadius)}${pine(500, 790, 300, 70, snowRadius)}
-${cabin(percent)}
+${cabin(percent, clock)}
 </svg>`
 }
 
@@ -520,7 +553,7 @@ const drift = (top: number, seed: number, fill: string): string => {
 }
 
 // The ground: its frame stretches to the window, so the snow keeps its height beside the corners
-const ground = (percent: number): string => {
+const ground = (percent: number, clock: number): string => {
   const top: number = groundTop(percent)
   const sparkles: string[] = []
 
@@ -529,7 +562,7 @@ const ground = (percent: number): string => {
     const y: number = top + 20 + hash(index + 600) * (HEIGHT - top - 20)
 
     sparkles.push(
-      `<circle cx="${n(x)}" cy="${n(y)}" r="1.6" fill="#ffffff">${twinkle(index + 700, 0, 0.9)}</circle>`,
+      `<circle cx="${n(x)}" cy="${n(y)}" r="1.6" fill="#ffffff" opacity="0.9"/>`,
     )
   }
 
@@ -537,87 +570,84 @@ const ground = (percent: number): string => {
 ${drift(top, 1, "url(#ground)")}
 ${drift(top + 60, 2, "#dde3f5")}
 ${drift(top + 115, 3, "#eef2fc")}
-${sparkles.join("")}
+${twinkleGroups(sparkles, 700, 0, clock)}
 </svg>`
 }
 
-// The robin perched on the sign, its feet on the board's snow at (125, 172), drawn a size up
-const robin =
-  (): string => `<g transform="translate(125 172) scale(1.3) translate(-125 -172)">
-<path d="M106 152 L84 146 L88 162 Z" fill="${COLORS.robinWing}"/>
-<path d="M104 152 C104 128 122 114 138 116 C152 118 158 132 154 148 C150 166 132 172 118 170 C108 168 104 162 104 152 Z" fill="${COLORS.robinBody}"/>
-<path d="M140 124 C152 126 156 140 152 152 C148 164 134 168 126 164 C132 152 132 134 140 124 Z" fill="${COLORS.robinBreast}"/>
-<path d="M120 168 C130 170 144 166 150 158 C146 168 134 172 120 168 Z" fill="${COLORS.robinBelly}"/>
-<path d="M108 146 Q122 136 134 152 Q118 162 108 146 Z" fill="${COLORS.robinWing}"/>
-<circle cx="146" cy="128" r="2.6" fill="#1a1a1a"/>
-<polygon points="153,130 163,133 153,136" fill="${COLORS.beak}"/>
-<path d="M122 169 V174 M132 169 V174" stroke="#3a2a1a" stroke-width="2.5"/>
-<path d="M124 121 C126 104 142 100 154 119 Z" fill="${COLORS.hat}"/>
-<path d="M132 107 C122 96 110 96 104 104 C114 102 122 106 128 114 Z" fill="${COLORS.hat}"/>
-<rect x="121" y="116" width="36" height="7" rx="3.5" fill="${COLORS.snow}"/>
-<circle cx="104" cy="104" r="5.5" fill="${COLORS.snow}"/>
-</g>`
-
-// Whole minutes left as the sign writes them: 51m, or a dash when there is no cache
-const cacheLabel = (minutes: number | null): string =>
-  minutes === null ? "-" : `${minutes}m`
-
-const candle = (minutes: number | null): string => {
-  const filled: number =
-    minutes === null ? 0 : Math.min(1, minutes / CANDLE_FULL_MINUTES)
-  const height: number = 5 + filled * 26
-  const top: number = 302 - height
-  const flame: string =
-    minutes === null
-      ? ""
-      : `<circle cx="88" cy="${n(top - 7)}" r="12" fill="url(#warmGlow)"/>
-<ellipse cx="88" cy="${n(top - 6)}" rx="3.6" ry="6.5" fill="#ffc95a"><animate attributeName="ry" values="6.5;5.4;6.8;6.5" dur="1.6s" repeatCount="indefinite"/></ellipse>
-<ellipse cx="88" cy="${n(top - 4.5)}" rx="1.6" ry="3" fill="#fff3c4"/>`
-
-  return `<rect x="79" y="302" width="18" height="4" rx="2" fill="${COLORS.ribbon}"/>
-<rect x="83" y="${n(top)}" width="10" height="${n(height)}" rx="2" fill="#f3e3b5"/>
-${flame}`
+// One depth of falling snow: far flakes are small and slow, near ones big and quicker
+type SnowLayer = {
+  share: number
+  minRadius: number
+  maxRadius: number
+  opacity: number
+  fallSeconds: number
+  sway: number
+  swaySeconds: number
 }
 
-const sign = (
-  view: SceneView,
-): string => `<svg x="0" y="0" width="100%" height="100%" viewBox="0 0 ${LEFT_WIDTH} ${HEIGHT}" preserveAspectRatio="xMinYMid meet" overflow="visible">
-<path d="M80 -20 V178 M170 -20 V178" stroke="${COLORS.rope}" stroke-width="3"/>
-${robin()}
-<rect x="63" y="174" width="124" height="80" rx="8" fill="url(#board)" stroke="${COLORS.woodDark}" stroke-width="4"/>
-<rect x="66" y="170" width="118" height="8" rx="4" fill="${COLORS.snow}"/>
-<text x="125" y="223" text-anchor="middle" font-family="${FONT}" font-size="40" font-weight="700" fill="${COLORS.boardText}">${clampPercent(view.percent)}%</text>
-<text x="125" y="244" text-anchor="middle" font-family="${FONT}" font-size="16" font-weight="600" fill="${COLORS.boardText}">context</text>
-<path d="M88 254 V264 M162 254 V264" stroke="${COLORS.rope}" stroke-width="3"/>
-<rect x="70" y="262" width="110" height="50" rx="6" fill="url(#board)" stroke="${COLORS.woodDark}" stroke-width="3"/>
-${candle(view.cacheMinutes)}
-<text x="138" y="290" text-anchor="middle" font-family="${FONT}" font-size="25" font-weight="700" fill="${COLORS.boardText}">${cacheLabel(view.cacheMinutes)}</text>
-<text x="138" y="305" text-anchor="middle" font-family="${FONT}" font-size="12" font-weight="600" fill="${COLORS.boardText}">cache</text>
-</svg>`
+const SNOW_LAYERS: readonly SnowLayer[] = [
+  {
+    share: 0.45,
+    minRadius: 1,
+    maxRadius: 1.8,
+    opacity: 0.55,
+    fallSeconds: 26,
+    sway: 14,
+    swaySeconds: 9,
+  },
+  {
+    share: 0.35,
+    minRadius: 1.6,
+    maxRadius: 2.6,
+    opacity: 0.75,
+    fallSeconds: 19,
+    sway: 22,
+    swaySeconds: 7,
+  },
+  {
+    share: 0.2,
+    minRadius: 2.4,
+    maxRadius: 3.6,
+    opacity: 0.9,
+    fallSeconds: 13,
+    sway: 30,
+    swaySeconds: 5.5,
+  },
+]
 
-// Falling flakes over everything: more of them as the context fills. Each rests where it
-// starts, so the scene still shows snow with motion turned off
-const snowfall = (percent: number): string => {
-  const flakes: string[] = []
+// Falling flakes over everything: more of them as the limit fills. Each layer moves as one: its
+// flakes are drawn twice, a screen apart, and the layer slides down one screen and starts over,
+// so the fall never seams. With motion turned off the flakes rest where they are drawn
+const snowfall = (percent: number, clock: number): string => {
   const count: number = 40 + Math.round(percent * 1.4)
 
-  for (let index = 0; index < count; index++) {
-    const x: number = hash(index + 1000) * WIDTH
-    const y: number = hash(index + 2000) * HEIGHT
-    const radius: number = 1.2 + hash(index + 3000) * 2.4
-    const seconds: number = 9 + hash(index + 4000) * 9
-    const sway: number = (hash(index + 5000) - 0.5) * 60
+  return SNOW_LAYERS.map((layer, layerIndex) => {
+    const flakes: string[] = []
+    const layerCount: number = Math.round(count * layer.share)
 
-    flakes.push(
-      `<circle cx="${n(x)}" cy="${n(y)}" r="${n(radius)}" fill="#ffffff" opacity="${n(0.5 + hash(index + 6000) * 0.4)}"><animateTransform attributeName="transform" type="translate" values="0 ${n(-y - 10)};${n(sway)} ${n((HEIGHT - y) / 2 - y / 2)};0 ${n(HEIGHT + 10 - y)}" dur="${n(seconds)}s" begin="-${n(hash(index + 7000) * seconds)}s" repeatCount="indefinite"/></circle>`,
-    )
-  }
+    for (let index = 0; index < layerCount; index++) {
+      const seed: number = layerIndex * 1000 + index
+      const x: number = hash(seed + 10_000) * WIDTH
+      const y: number = hash(seed + 20_000) * HEIGHT
+      const radius: number =
+        layer.minRadius +
+        hash(seed + 30_000) * (layer.maxRadius - layer.minRadius)
 
-  return flakes.join("")
+      flakes.push(
+        `<circle cx="${n(x)}" cy="${n(y)}" r="${n(radius)}"/><circle cx="${n(x)}" cy="${n(y - HEIGHT)}" r="${n(radius)}"/>`,
+      )
+    }
+
+    const fall: string = `<animateTransform attributeName="transform" type="translate" values="0 0;0 ${HEIGHT}" dur="${n(layer.fallSeconds)}s" begin="-${n(clock % layer.fallSeconds)}s" repeatCount="indefinite"/>`
+    const sway: string = `<animateTransform attributeName="transform" type="translate" values="0 0;${layer.sway} 0;0 0;${-layer.sway} 0;0 0" dur="${n(layer.swaySeconds)}s" begin="-${n(clock % layer.swaySeconds)}s" repeatCount="indefinite"/>`
+
+    return `<g>${sway}<g fill="#ffffff" opacity="${layer.opacity}">${fall}${flakes.join("")}</g></g>`
+  }).join("")
 }
 
 export const sceneSvg = (view: SceneView): string => {
   const percent: number = clampPercent(view.percent)
+  const clock: number = view.seconds
 
   // The root has no viewBox, so each layer gets the whole screen: the sky and the flakes crop to
   // fill it, the corners keep their shape at the sides, and the ground stretches between them
@@ -625,11 +655,10 @@ export const sceneSvg = (view: SceneView): string => {
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
 ${defs()}
-<svg ${fill}>${sky(percent)}</svg>
-${leftCorner(percent)}
-${rightCorner(percent)}
-${ground(percent)}
-${sign(view)}
-<svg ${fill}>${snowfall(percent)}</svg>
+<svg ${fill}>${sky(percent, clock)}</svg>
+${leftCorner(percent, clock)}
+${rightCorner(percent, clock)}
+${ground(percent, clock)}
+<svg ${fill}>${snowfall(percent, clock)}</svg>
 </svg>`
 }
