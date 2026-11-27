@@ -2,15 +2,16 @@
 
 ## Data
 
-| What           | Source                                                                                                               | Refreshed                                                               |
-| -------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| App colors     | `winterNight` palette in `hooks/register.tsx`, built by `createTheme` (copied from `shared/theme` by `npm run sync`) | Once per load of the mod; applied with `$.theme.set` at `session.start` |
-| Snow depth     | `percentUsed` of the `five_hour` window in `rateLimits`, rounded by `limitPercent`                                   | `session.start`, and `session.measure` when `rateLimits` changed        |
-| Window reset   | `resetsAt` of that window (`limitResetsAt`); past it, `snowPercent` gives 0                                          | Every 60 s by `$.clock.every`                                           |
-| Stored figures | The `snow` atom (`types/index.d.ts`): `percent`, `resetsAt`, `changedAt`; an unchanged reading writes nothing        | As above                                                                |
-| Drawn scene    | `ui.render` for `Backdrop`, one of two ways below                                                                    | When the atom changes                                                   |
+| What           | Source                                                                                                                                         | Refreshed                                                                                       |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| App colors     | `winterNight` palette in `hooks/register.tsx`, built by `createTheme` (copied from `shared/theme` by `npm run sync`)                           | Once per load of the mod; applied with `$.theme.set` at `session.start`                         |
+| Snow depth     | session-band's `5h` figure: `wholePercent(windowPercent(...))` of the `five_hour` window, from `shared/rate-limits` (copied by `npm run sync`) | `session.start`, and every `session.measure`, as session-band refreshes                         |
+| Kept reading   | `$.store` key `rateLimits`, written by `saveRateLimits` and read by `shownRateLimits`, as in session-band; each mod has its own store          | Written when `session.measure` says `rateLimits` changed; read while the session has no reading |
+| Window reset   | Past `resetsAt`, `windowPercent` gives 0                                                                                                       | Every 60 s by `$.clock.every`                                                                   |
+| Stored figures | The `snow` atom (`types/index.d.ts`): `used`, `resetsAt`, `percent`, `changedAt`; an unchanged figure writes nothing                           | As above                                                                                        |
+| Drawn scene    | `ui.render` for `Backdrop`, one of two ways below                                                                                              | When the atom changes                                                                           |
 
-No five-hour reading (off a subscription, or before the first response of a session) leaves the snow at its last depth, 0 in a new session.
+The snow shows the same `5h` figure as session-band, from the same code in `shared/rate-limits`: a new session uses the kept reading until its first response, and a reset window reads 0. The two mods keep separate stores, so right after installing christmas-theme it starts at 0 until a first response saves a reading. With no reading at all (off a subscription) the snow stays at 0.
 
 ## Two ways to draw
 

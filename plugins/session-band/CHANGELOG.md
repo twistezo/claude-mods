@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.14 - 2026-11-27
+
+- Rate-limit reading moved to `shared/rate-limits`, shared with christmas-theme; no visible change.
+
 ## 0.1.13 - 2026-11-15
 
 - Line counts come from `git diff --numstat`, so a translated git no longer reads every change as 0.

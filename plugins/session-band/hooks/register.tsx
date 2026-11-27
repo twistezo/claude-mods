@@ -5,7 +5,6 @@ import type {
   EngineInterface,
   ProcessRunResult,
   Register,
-  SessionRateLimit,
   SessionUsage,
   TextProps,
 } from "claude-code"
@@ -16,15 +15,18 @@ import {
   activeAgents,
   countLines,
   hasChanges,
-  limitPercent,
-  limitResetsAt,
-  mergeRateLimits,
   parseNumstat,
   segments,
   shortenPath,
-  storedRateLimits,
 } from "./band-info"
 import type { Segment, UsageLevel } from "./band-info"
+import {
+  limitPercent,
+  limitResetsAt,
+  saveRateLimits,
+  shownRateLimits,
+} from "./shared/rate-limits"
+import type { ShownRateLimits } from "./shared/rate-limits"
 
 type Hex = `#${string}`
 
@@ -205,51 +207,6 @@ const readChanges = async (
     added: tracked.added + (await readUntrackedLines($, cwd)),
     removed: tracked.removed,
   }
-}
-
-// The store key for the last rate limits any session saw
-const RATE_LIMITS_KEY: string = "rateLimits"
-
-// The rate limits to show, and whether they were kept from an earlier session
-type ShownRateLimits = {
-  rateLimits: readonly SessionRateLimit[]
-  cached: boolean
-}
-
-// Keeps a new reading for the next session, merged by window so one left out stays kept.
-// Called only when a measurement says the limits moved, so a session holding an older
-// reading never writes it over a newer one
-const saveRateLimits = async (
-  $: EngineInterface,
-  fresh: readonly SessionRateLimit[],
-): Promise<void> => {
-  if (fresh.length === 0) {
-    return
-  }
-
-  const stored: SessionRateLimit[] = storedRateLimits(
-    await $.store.get(RATE_LIMITS_KEY),
-  )
-
-  await $.store.set(RATE_LIMITS_KEY, mergeRateLimits(stored, fresh))
-}
-
-// This session's rate limits; until it has a reading of its own (a new conversation before
-// its first response), the kept ones, marked cached. Kept limits have no account attached,
-// as the engine names none: after an account switch they show until the first response
-const shownRateLimits = async (
-  $: EngineInterface,
-  fresh: readonly SessionRateLimit[],
-): Promise<ShownRateLimits> => {
-  if (fresh.length > 0) {
-    return { rateLimits: fresh, cached: false }
-  }
-
-  const stored: SessionRateLimit[] = storedRateLimits(
-    await $.store.get(RATE_LIMITS_KEY),
-  )
-
-  return { rateLimits: stored, cached: stored.length > 0 }
 }
 
 // Reads the folder, branch and agents, and keeps them with the usage figures given. Rate

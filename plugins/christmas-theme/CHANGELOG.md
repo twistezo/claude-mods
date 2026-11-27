@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1 - 2026-11-27
+
+- The snow follows exactly the `5h` figure session-band shows: the same reading, rounding, reset and kept value, from shared code.
+- A new session starts with the snow at the last kept five-hour reading, instead of at 0 until the first reply.
+
 ## 0.3.0 - 2026-11-27
 
 - Desktop: snow drawn on the GPU over a still scene. The backdrop no longer goes blank when the limit moves, and the snow rises smoothly to each new level.

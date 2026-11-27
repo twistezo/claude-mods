@@ -1,11 +1,14 @@
-import type { AgentStatus, SessionRateLimit } from "claude-code"
+import type { AgentStatus } from "claude-code"
 
 import type { BandInfo, LineChanges } from "../types"
 
-export type UsageLevel = "normal" | "warning" | "danger"
+import {
+  parseResetsAt,
+  wholePercent,
+  windowPercent,
+} from "./shared/rate-limits"
 
-// The rate-limit windows the band shows
-export type RateLimitKind = "five_hour" | "seven_day"
+export type UsageLevel = "normal" | "warning" | "danger"
 
 // One labelled figure after the folder and branch: `ctx 64%`, `agents 2`.
 // The value is drawn bold in its level's color, the label and unit muted
@@ -58,27 +61,6 @@ export const shortenPath = (path: string, home: string | undefined): string => {
   return path.startsWith(`${home}/`) ? `~${path.slice(home.length)}` : path
 }
 
-const findLimit = (
-  rateLimits: readonly SessionRateLimit[],
-  kind: RateLimitKind,
-): SessionRateLimit | undefined => rateLimits.find(limit => limit.kind === kind)
-
-export const limitPercent = (
-  rateLimits: readonly SessionRateLimit[],
-  kind: RateLimitKind,
-): number | null => findLimit(rateLimits, kind)?.percentUsed ?? null
-
-export const limitResetsAt = (
-  rateLimits: readonly SessionRateLimit[],
-  kind: RateLimitKind,
-): string | null => findLimit(rateLimits, kind)?.resetsAt ?? null
-
-// A reset time in milliseconds since the epoch; NaN when missing or not a date
-const parseResetsAt = (resetsAt: string | null | undefined): number =>
-  resetsAt === null || resetsAt === undefined
-    ? Number.NaN
-    : Date.parse(resetsAt)
-
 // 2h 14m, or 14m under an hour; a partial minute counts as a whole one
 export const formatCountdown = (milliseconds: number): string => {
   const minutes: number = Math.max(0, Math.ceil(milliseconds / 60_000))
@@ -117,48 +99,6 @@ const resetNote = (
     ? { label: "resets in", value: formatCountdown(at - now) }
     : { label: "resets", value: formatResetDay(new Date(at)) }
 }
-
-// A window whose reset time has passed is empty again: the last response's percent is stale
-export const windowPercent = (
-  percent: number | null,
-  resetsAt: string | null,
-  now: number,
-): number | null => {
-  const at: number = parseResetsAt(resetsAt)
-
-  return percent !== null && !Number.isNaN(at) && at <= now ? 0 : percent
-}
-
-const isStoredRateLimit = (entry: unknown): entry is SessionRateLimit => {
-  if (typeof entry !== "object" || entry === null) {
-    return false
-  }
-
-  const fields: Record<string, unknown> = entry as Record<string, unknown>
-
-  return (
-    typeof fields.kind === "string" &&
-    typeof fields.percentUsed === "number" &&
-    typeof fields.resetsAt === "string" &&
-    !Number.isNaN(parseResetsAt(fields.resetsAt))
-  )
-}
-
-// Rate limits read back from the mod's store: well-formed entries only, as an older or
-// broken write may have left anything there. An entry needs a reset time, so a kept
-// reading always expires: once its reset passes it reads 0%
-export const storedRateLimits = (value: unknown): SessionRateLimit[] =>
-  Array.isArray(value) ? value.filter(isStoredRateLimit) : []
-
-// The limits to keep: the fresh windows, plus the kept ones the fresh reading left out,
-// so a reading without `seven_day` does not drop the kept `1w`
-export const mergeRateLimits = (
-  stored: readonly SessionRateLimit[],
-  fresh: readonly SessionRateLimit[],
-): SessionRateLimit[] => [
-  ...fresh,
-  ...stored.filter(kept => !fresh.some(limit => limit.kind === kept.kind)),
-]
 
 export const activeAgents = (statuses: readonly AgentStatus[]): number =>
   statuses.filter(status => ACTIVE_STATUSES.includes(status)).length
@@ -213,7 +153,7 @@ const usageSegment = (
     : [
         {
           label,
-          value: String(Math.round(percent)),
+          value: String(wholePercent(percent)),
           unit: "%",
           level: usageLevel(percent),
           muted,

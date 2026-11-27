@@ -1,5 +1,5 @@
-// Copies shared/theme into every theme mod's hooks/shared: an installed mod gets only its own folder.
-// Files in hooks/shared that are not in shared/theme are deleted.
+// Copies each shared/ folder into the hooks/shared of every mod that uses it: an installed mod gets
+// only its own folder. Files in a mod's hooks/shared that no source of that mod holds are deleted.
 // Usage: node scripts/sync-shared.ts [--check]
 // --check writes nothing and exits 1 when a copy is missing, out of date or extra
 
@@ -13,7 +13,20 @@ import {
 } from "node:fs"
 import { join } from "node:path"
 
-const SOURCE_DIR: string = "shared/theme"
+type SharedSource = {
+  dir: string
+  // Whether the mod in plugins/<name> uses this folder
+  usedBy: (plugin: string) => boolean
+}
+
+const SOURCES: readonly SharedSource[] = [
+  { dir: "shared/theme", usedBy: plugin => plugin.endsWith("-theme") },
+  // session-band shows the rate limits; christmas-theme's snow follows its 5h figure
+  {
+    dir: "shared/rate-limits",
+    usedBy: plugin => ["session-band", "christmas-theme"].includes(plugin),
+  },
+]
 const PLUGINS_DIR: string = "plugins"
 const TARGET_SUBDIR: string = "hooks/shared"
 
@@ -22,25 +35,44 @@ const isCheck: boolean = process.argv.includes("--check")
 const readOrUndefined = (path: string): string | undefined =>
   existsSync(path) ? readFileSync(path, "utf8") : undefined
 
-const sourceFiles: string[] = readdirSync(SOURCE_DIR)
-// Theme mods only: other mods do not use shared/theme
-const pluginDirs: string[] = readdirSync(PLUGINS_DIR)
-  .filter(plugin => plugin.endsWith("-theme"))
-  .map(plugin => join(PLUGINS_DIR, plugin))
+// Each file a mod gets, by name, with the shared folder it comes from
+const filesFor = (plugin: string): Map<string, string> => {
+  const files: Map<string, string> = new Map()
+
+  for (const source of SOURCES.filter(entry => entry.usedBy(plugin))) {
+    for (const file of readdirSync(source.dir)) {
+      const taken: string | undefined = files.get(file)
+
+      if (taken !== undefined) {
+        throw new Error(`${file} is in both ${taken} and ${source.dir}`)
+      }
+
+      files.set(file, source.dir)
+    }
+  }
+
+  return files
+}
 
 const stale: string[] = []
 
-for (const pluginDir of pluginDirs) {
-  const targetDir: string = join(pluginDir, TARGET_SUBDIR)
+for (const plugin of readdirSync(PLUGINS_DIR)) {
+  const files: Map<string, string> = filesFor(plugin)
+
+  if (files.size === 0) {
+    continue
+  }
+
+  const targetDir: string = join(PLUGINS_DIR, plugin, TARGET_SUBDIR)
   const extraFiles: string[] = existsSync(targetDir)
-    ? readdirSync(targetDir).filter(file => !sourceFiles.includes(file))
+    ? readdirSync(targetDir).filter(file => !files.has(file))
     : []
 
   for (const file of extraFiles) {
     const extra: string = join(targetDir, file)
 
     if (isCheck) {
-      stale.push(`${extra} (not in ${SOURCE_DIR})`)
+      stale.push(`${extra} (in no shared folder of ${plugin})`)
       continue
     }
 
@@ -48,8 +80,8 @@ for (const pluginDir of pluginDirs) {
     console.log(`deleted ${extra}`)
   }
 
-  for (const file of sourceFiles) {
-    const source: string = readFileSync(join(SOURCE_DIR, file), "utf8")
+  for (const [file, sourceDir] of files) {
+    const source: string = readFileSync(join(sourceDir, file), "utf8")
     const target: string = join(targetDir, file)
 
     if (readOrUndefined(target) === source) {

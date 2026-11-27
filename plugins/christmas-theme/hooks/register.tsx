@@ -9,9 +9,16 @@ import type {
 
 import type { SnowState } from "../types"
 import { sceneSvg } from "./scene"
-import { limitPercent, limitResetsAt, snowPercent } from "./session-snow"
 import { createTheme } from "./shared/create-theme"
 import type { Palette, Theme } from "./shared/create-theme"
+import {
+  limitPercent,
+  limitResetsAt,
+  saveRateLimits,
+  shownRateLimits,
+  wholePercent,
+  windowPercent,
+} from "./shared/rate-limits"
 
 const SCENE_NAME: string = "christmas-eve"
 
@@ -54,56 +61,54 @@ const LOOK: ThemeSetArgs = { ...THEME.look, overrideColorScheme: "dark" }
 
 const snow: Atom<SnowState> = atom(
   { plugin: "christmas-theme", key: "snow" } as const,
-  { percent: 0, resetsAt: null, changedAt: 0 },
+  { used: null, resetsAt: null, percent: 0, changedAt: 0 },
 )
 
-// Redraws only when the snow's depth changes; the redraw takes its animation phase from `changedAt`
+// Lays the snow at the five-hour window's reading, as session-band shows it: the same whole
+// percent, 0 once the window has reset. Redraws only when that figure or the reading changes;
+// the redraw takes its animation phase from `changedAt`
 const setSnow = async (
   $: EngineInterface,
-  percent: number,
-  resetsAt: number | null,
+  used: number,
+  resetsAt: string | null,
 ): Promise<void> => {
+  const now: number = await $.clock.now()
+  const percent: number = wholePercent(windowPercent(used, resetsAt, now) ?? 0)
   const current: SnowState = await read($, snow)
 
-  if (current.percent === percent && current.resetsAt === resetsAt) {
+  if (
+    current.used === used &&
+    current.resetsAt === resetsAt &&
+    current.percent === percent
+  ) {
     return
   }
 
-  const changedAt: number = await $.clock.now()
-
-  await update($, snow, () => ({ percent, resetsAt, changedAt }))
+  await update($, snow, () => ({ used, resetsAt, percent, changedAt: now }))
 }
 
-// A reading of the five-hour window; one without it leaves the snow as it is
-const readLimit = async (
+// The rate limits session-band would show: this session's, else the kept ones. A reading
+// without the five-hour window leaves the snow as it is
+const showLimits = async (
   $: EngineInterface,
-  rateLimits: readonly SessionRateLimit[],
+  fresh: readonly SessionRateLimit[],
 ): Promise<void> => {
-  const percent: number | null = limitPercent(rateLimits)
+  const { rateLimits } = await shownRateLimits($, fresh)
+  const used: number | null = limitPercent(rateLimits, "five_hour")
 
-  if (percent === null) {
-    return
+  if (used !== null) {
+    await setSnow($, used, limitResetsAt(rateLimits, "five_hour"))
   }
-
-  const resetsAt: number | null = limitResetsAt(rateLimits)
-
-  await setSnow(
-    $,
-    snowPercent(percent, resetsAt, await $.clock.now()),
-    resetsAt,
-  )
 }
 
 // A window that has reset melts the snow before the next response reports it
 const checkReset = async ($: EngineInterface): Promise<void> => {
   const state: SnowState = await read($, snow)
-  const percent: number = snowPercent(
-    state.percent,
-    state.resetsAt,
-    await $.clock.now(),
-  )
 
-  await setSnow($, percent, percent === state.percent ? state.resetsAt : null)
+  // A state stored before `used` existed waits for the next reading
+  if (typeof state.used === "number") {
+    await setSnow($, state.used, state.resetsAt)
+  }
 }
 
 export const register: Register = on => {
@@ -113,17 +118,20 @@ export const register: Register = on => {
     }
 
     await $.theme.set(LOOK)
-    await readLimit($, (await $.session.usage()).rateLimits)
+    await showLimits($, (await $.session.usage()).rateLimits)
     $.clock.every(RESET_CHECK_MS, () => checkReset($))
 
     return next(e)
   })
 
-  // After each turn, and when the five-hour window moves a whole point
+  // After each turn, and when a rate-limit window moves a whole point: kept and shown as
+  // session-band does
   on("session.measure", async ($, e, next) => {
     if (e.changed.includes("rateLimits")) {
-      await readLimit($, e.rateLimits)
+      await saveRateLimits($, e.rateLimits)
     }
+
+    await showLimits($, e.rateLimits)
 
     return next(e)
   })
