@@ -2,10 +2,11 @@
 
 Mods for the Claude desktop app.
 
-| Theme                                                | Dark                     | Light   |
-| ---------------------------------------------------- | ------------------------ | ------- |
-| [`dracula-theme`](plugins/dracula-theme)             | Dracula                  | Alucard |
-| [`dracula-scene-theme`](plugins/dracula-scene-theme) | Dracula + animated scene | none    |
+| Theme                                                | Dark                                                    | Light   |
+| ---------------------------------------------------- | ------------------------------------------------------- | ------- |
+| [`dracula-theme`](plugins/dracula-theme)             | Dracula                                                 | Alucard |
+| [`dracula-scene-theme`](plugins/dracula-scene-theme) | Dracula + animated scene                                | none    |
+| [`christmas-theme`](plugins/christmas-theme)         | Snowy night; snow rises with context, candle with cache | none    |
 
 | Mod                                    | What it shows above the prompt                                       |
 | -------------------------------------- | -------------------------------------------------------------------- |
@@ -18,7 +19,7 @@ Desktop app: **+** → **Plugins** → add marketplace `twistezo/claude-mods` �
 ## Update
 
 ```bash
-# <mod>: dracula-theme, dracula-scene-theme or session-band; repeat the update for each installed mod
+# <mod>: dracula-theme, dracula-scene-theme, christmas-theme or session-band; repeat the update for each installed mod
 claude plugin marketplace update claude-mods && claude plugin update <mod>@claude-mods
 ```
 
@@ -26,3 +27,4 @@ claude plugin marketplace update claude-mods && claude plugin update <mod>@claud
 
 - [MIT](LICENSE)
 - Colors: [Dracula Theme](https://draculatheme.com).
+- `christmas-theme`: recreated from Lydia Hallie's [snow-as-context demo](https://x.com/lydiahallie/status/2122028598639136810).
